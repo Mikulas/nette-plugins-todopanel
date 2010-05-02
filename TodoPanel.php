@@ -6,15 +6,24 @@
  * @license MIT
  */
 
-/*
-use Nette\Templates\
-namespace Nette;
-*/
 class TodoPanel extends Object implements IDebugPanel
 {
 
-	/** Stores  */
+	const HIGHLIGHT = TRUE;
+
+
+
+	/** stores generated todos in one instance */
 	private $todo = array();
+
+
+
+	/** list of highlighted words, does not affect todo getter itself */
+	private $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
+
+	/** highlight style */
+	private $highlight_begin = '<span style="font-weight: bold;">';
+	private $highlight_end = '</span>';
 	
 
 
@@ -55,6 +64,9 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 
+	/**
+	 * Wrapper for generateTodo, performace booster in one instance
+	 */
 	private function getTodo()
 	{
 		if (empty($this->todo)) {
@@ -65,6 +77,9 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 
+	/**
+	 * Returns count of all second level elements
+	 */
 	private function getCount()
 	{
 		$count = 0;
@@ -76,13 +91,16 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 
+	/**
+	 * Returns array in format $filename => array($todos)
+	 * @uses SafeStream
+	 */
 	private function generateTodo()
 	{
 		SafeStream::register();
 		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(APP_DIR));
 		$todo = array();
 		foreach ($iterator as $path => $match) {
-			//$fileinfo = pathinfo($path);
 			$relative = str_replace(realpath(APP_DIR), '', realpath($path));
 
 			$handle = fopen("safe://" . $path, 'r');
@@ -97,8 +115,28 @@ class TodoPanel extends Object implements IDebugPanel
 			fclose($handle);
 			preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
 			if (isset($m['todo']) && !empty($m['todo'])) {
+				if (self::HIGHLIGHT) {
+					foreach ($m['todo'] as $k => $t) {
+						$m['todo'][$k] = $this->highlight($t);
+					}
+				}
 				$todo[$relative] = $m['todo'];
 			}
+		}
+		return $todo;
+	}
+
+
+
+	/**
+	 * Highlights specified words in given string
+	 * @param string $todo
+	 * @return string
+	 */
+	private function highlight($todo)
+	{
+		foreach ($this->keywords as $kw) {
+			$todo = str_replace($kw, $this->highlight_begin . $kw . $this->highlight_end, $todo);
 		}
 		return $todo;
 	}

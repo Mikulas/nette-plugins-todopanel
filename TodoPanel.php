@@ -1,6 +1,6 @@
 <?php
 /**
- * Todo panel for Nette 1.0+. Displays all presenters and their required and optional parameters.
+ * Annotations Todo panel for Nette 1.0+. Displays all todos in APP_DIR folder
  *
  * @author Mikuláš Dítě
  * @license MIT

@@ -76,6 +76,16 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
+	 * Registeres panel to Debug bar
+	 */
+	static function register()
+	{
+		Debug::addPanel(new self);
+	}
+
+
+
+	/**
 	 * Wrapper for generateTodo, performace booster in one instance
 	 */
 	private function getTodo()
@@ -108,7 +118,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private function generateTodo()
 	{
-		SafeStream::register();
+		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(APP_DIR));
 		$todo = array();
 		foreach ($iterator as $path => $match) {

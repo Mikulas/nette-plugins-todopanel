@@ -9,21 +9,31 @@
 class TodoPanel extends Object implements IDebugPanel
 {
 
-	const HIGHLIGHT = TRUE;
-
-
-
-	/** stores generated todos in one instance */
+	/**
+	 * stores generated todos in one instance
+	 * @var array|mixed
+	 */
 	private $todo = array();
 
 
 
-	/** list of highlighted words, does not affect todo getter itself */
-	private $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
+	/** @var bool */
+	public $highlight = TRUE;
 
-	/** highlight style */
-	private $highlight_begin = '<span style="font-weight: bold;">';
-	private $highlight_end = '</span>';
+	/**
+	 * list of highlighted words, does not affect todo getter itself
+	 * @var array|mixed
+	 */
+	public $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
+
+	/**
+	 * highlight style
+	 * @var string
+	 */
+	public $highlight_begin = '<span style="font-weight: bold;">';
+
+	/** @var string */
+	public $highlight_end = '</span>';
 	
 
 
@@ -33,7 +43,8 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	function getTab()
 	{
-		return 'Todo (' . $this->getCount() . ')';
+		return '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPnRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBUaGUgR0lNUAoKKGMpIDIwMDMgSmFrdWIgJ2ppbW1hYycgU3RlaW5lcicz71gAAAGtSURBVHjarZMxSBthFMd/d/feqVjiIAoFcQqVFoogjUSJdDBYaECH4Nq1OLiU2C52KKGi4uTgEhDcFRxEyeDSsQdKhdKSEhAFseEGCxFpa+7r0Fi8axM7+OC/vf/ve+//+ODftQKYiFa4ofLXDb7v/1GpVIrC8lcmuQaYLSzMcPDlhM2dXTzPo1KpAFAul7nb3clo6hEDD/t48WZ5FngdBQCwWXzH1naRarVKLBYDIB6PY9s2hUKBs69Hof4QwBjIZrOkUqlQk2VZAORyOYobq40BYMhknjI+PoGqIFKXKuoIjgrF9aYAEHERdVDRullQR2ibew73+jHGhPrt8PugKrC2RPv8FHv7e3jvPdpeTWKdHuP0D/11uhAgCMB1XXrK+7SffyORSPB4fRHr4hx7+i1uMk0QNJvAGEQVv/c+Vu2Sjpks+vM79vQcLck0qtp8hVoQoKp4gxP4vQ+wapccjEzSOpxGXEVFCCKAcIjG4Kow9mQMzWQQEZKiqApO/SIYGgMCA0svn/H5sIKpZxJ1xO60NgZ8+viB6sUPero6+J2VITLx/3+mG5TntuoX7nmiqfg2Y6EAAAAASUVORK5CYII=">' .
+			'Todo (' . $this->getCount() . ')';
 	}
 
 
@@ -115,7 +126,7 @@ class TodoPanel extends Object implements IDebugPanel
 			fclose($handle);
 			preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
 			if (isset($m['todo']) && !empty($m['todo'])) {
-				if (self::HIGHLIGHT) {
+				if ($this->highlight) {
 					foreach ($m['todo'] as $k => $t) {
 						$m['todo'][$k] = $this->highlight($t);
 					}

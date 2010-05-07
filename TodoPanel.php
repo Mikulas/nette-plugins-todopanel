@@ -4,7 +4,15 @@
  *
  * @author Mikuláš Dítě
  * @license MIT
+ *
+ * fork by Peter Ped Helcmanovsky
+ * - configurable root directory
+ * - string patterns to skip certain directories (.svn, sessions, temp and log by default)
+ * - namespace version
+ * - more valid final <table> HTML code (original doesn't open <tr> every time it should)
  */
+
+use Nette\Object, Nette\IDebugPanel, Nette\Templates\Template, Nette\Templates\LatteFilter, Nette\IO\SafeStream;
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -15,6 +23,14 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private $todo = array();
 
+	private $parsedir;				//root directory to parse (canonized)
+	
+	/**
+	 * any path+file containing one of the patterns will be skipped
+	 * TODO consider to search the directory string only without filename
+	 * @var array
+	 */
+	private $skippatterns = array();
 
 
 	/** @var bool */
@@ -36,8 +52,18 @@ class TodoPanel extends Object implements IDebugPanel
 	public $highlight_end = '</span>';
 	
 
+	public function __construct( $basedir = APP_DIR, $skippatterns = array( '/.svn/', '/sessions/', '/temp/', '/log/' ) )
+	{
+		$this->parsedir = realpath( $basedir );
+		$this->setSkipPatterns( $skippatterns );
+	}
 
-    	/**
+	public function setSkipPatterns( $skippatterns )
+	{
+		$this->skippatterns = array_merge( $skippatterns, str_replace( '/', '\\', $skippatterns ) );
+	}
+
+	/**
 	 * Renders HTML code for custom tab.
 	 * @return void
 	 */
@@ -57,6 +83,7 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		ob_start();
 		$template = new Template(dirname(__FILE__) . '/bar.todo.panel.phtml');
+		$template->registerFilter(new LatteFilter);
 		$template->todos = $this->getTodo();
 		$template->render();
 		return $cache['output'] = ob_get_clean();
@@ -119,10 +146,15 @@ class TodoPanel extends Object implements IDebugPanel
 	private function generateTodo()
 	{
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
-		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(APP_DIR));
+		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->parsedir));
 		$todo = array();
 		foreach ($iterator as $path => $match) {
-			$relative = str_replace(realpath(APP_DIR), '', realpath($path));
+			$ignorethisone = false;
+			foreach ( $this->skippatterns as $pattern ) {
+				if ( strpos( $path, $pattern ) !== false ) { $ignorethisone = true; break; }
+			}
+			if ( $ignorethisone ) continue;
+			$relative = str_replace($this->parsedir, '', $path);
 
 			$handle = fopen("safe://" . $path, 'r');
 			if (!$handle) {

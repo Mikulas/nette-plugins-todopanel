@@ -15,8 +15,6 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private $todo = array();
 
-
-
 	/** @var bool */
 	public $highlight = TRUE;
 
@@ -34,6 +32,9 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/** @var string */
 	public $highlight_end = '</span>';
+
+	/** @var array */
+	public $scanDirs;
 	
 
 
@@ -119,32 +120,56 @@ class TodoPanel extends Object implements IDebugPanel
 	private function generateTodo()
 	{
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
-		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(APP_DIR));
-		$todo = array();
-		foreach ($iterator as $path => $match) {
-			$relative = str_replace(realpath(APP_DIR), '', realpath($path));
+		if (empty($this->scanDirs)) {
+			$this->scanDirs[] = APP_DIR;
+		}
+		foreach ($this->scanDirs as $dir) {
+			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+			$todo = array();
+			foreach ($iterator as $path => $match) {
+				$relative = str_replace(realpath(APP_DIR), '', realpath($path));
 
-			$handle = fopen("safe://" . $path, 'r');
-			if (!$handle) {
-				throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relative . '\'');
-			}
-
-			$res = '';
-			while(!feof($handle)) {
-				$res .= fread($handle, filesize($path));
-			}
-			fclose($handle);
-			preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
-			if (isset($m['todo']) && !empty($m['todo'])) {
-				if ($this->highlight) {
-					foreach ($m['todo'] as $k => $t) {
-						$m['todo'][$k] = $this->highlight($t);
-					}
+				$handle = fopen("safe://" . $path, 'r');
+				if (!$handle) {
+					throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relative . '\'');
 				}
-				$todo[$relative] = $m['todo'];
+
+				$res = '';
+				while(!feof($handle)) {
+					$res .= fread($handle, filesize($path));
+				}
+				fclose($handle);
+				preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
+				if (isset($m['todo']) && !empty($m['todo'])) {
+					if ($this->highlight) {
+						foreach ($m['todo'] as $k => $t) {
+							$m['todo'][$k] = $this->highlight($t);
+						}
+					}
+					$todo[$relative] = $m['todo'];
+				}
 			}
 		}
 		return $todo;
+	}
+
+
+
+	/**
+	 * Add directory (or directories) to list.
+	 * @param  string|array
+	 * @return void
+	 * @throws \DirectoryNotFoundException if path is not found
+	 */
+	public function addDirectory($path)
+	{
+		foreach ((array) $path as $val) {
+			$real = realpath($val);
+			if ($real === FALSE) {
+				throw new /*\*/DirectoryNotFoundException("Directory '$val' not found.");
+			}
+			$this->scanDirs[] = $real;
+		}
 	}
 
 

@@ -1,13 +1,9 @@
 <?php
-/*namespace Nette;*/
-if (!function_exists('_netteRequestCb2')) {
-	function _netteRequestCb2($m)
-	{
-		return "$m[1]<a href='#' class='nette-toggler'>$m[2]($m[3]) " . '<abbr>&#x25ba;</abbr> </a><code class="nette-hidden">';
-	}
-}
-
+	/**
+	 * @author Mikulas Dite, Peter Ped Helcmanovsky
+	 */
 ?>
+
 <h1>Todo</h1>
 
 <div class="nette-inner">
@@ -19,20 +15,12 @@ if (!function_exists('_netteRequestCb2')) {
 			</tr>
 		</thead>
 		<tbody>
-			<?php foreach($todos as $file => $t): ?>
-			<tr>
-				<?php $info = pathinfo($file) ?>
-				<td rowspan="<?php echo count($t) ?>"><?php echo $info['filename'] ?></td>
-				<?php $header = TRUE ?>
-				<?php foreach($t as $todo): ?>
-				<?php if (!$header): ?>
-				<tr>
-				<?php endif ?>
-				<td><?php echo $todo ?></td>
+			{foreach $todos as $file => $t}
+				<tr n:foreach="$t as $todo">
+					<td n:if="$iterator->first" rowspan="{=count($t)}">{=basename($file)}</td>
+					<td>{!$todo}</td>
 				</tr>
-				<?php endforeach ?>
-			</tr>
-			<?php endforeach ?>
+			{/foreach}
 		</tbody>
 	</table>
 </div>

@@ -2,14 +2,8 @@
 /**
  * Annotations Todo panel for Nette 1.0+. Displays all todos in APP_DIR folder
  *
- * @author Mikuláš Dítě
+ * @author Mikuláš Dítě, Peter Ped Helcmanovsky
  * @license MIT
- *
- * fork by Peter Ped Helcmanovsky
- * - configurable root directory
- * - string patterns to skip certain directories (.svn, sessions, temp and log by default)
- * - namespace version
- * - more valid final <table> HTML code (original doesn't open <tr> every time it should)
  */
 
 use Nette\Object, Nette\IDebugPanel, Nette\Templates\Template, Nette\Templates\LatteFilter, Nette\IO\SafeStream;

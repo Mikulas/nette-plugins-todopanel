@@ -23,8 +23,6 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private $todo = array();
 
-	private $parsedir;				//root directory to parse (canonized)
-	
 	/**
 	 * any path+file containing one of the patterns will be skipped
 	 * TODO consider to search the directory string only without filename
@@ -50,11 +48,14 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/** @var string */
 	public $highlight_end = '</span>';
+
+	/** @var array */
+	private $scanDirs;
 	
 
 	public function __construct( $basedir = APP_DIR, $skippatterns = array( '/.svn/', '/sessions/', '/temp/', '/log/' ) )
 	{
-		$this->parsedir = realpath( $basedir );
+		$this->scanDirs = array( realpath($basedir) );
 		$this->setSkipPatterns( $skippatterns );
 	}
 
@@ -83,7 +84,7 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		ob_start();
 		$template = new Template(dirname(__FILE__) . '/bar.todo.panel.phtml');
-		$template->registerFilter(new LatteFilter);
+		$template->registerFilter(new LatteFilter());
 		$template->todos = $this->getTodo();
 		$template->render();
 		return $cache['output'] = ob_get_clean();
@@ -146,37 +147,58 @@ class TodoPanel extends Object implements IDebugPanel
 	private function generateTodo()
 	{
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
-		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->parsedir));
-		$todo = array();
-		foreach ($iterator as $path => $match) {
-			$ignorethisone = false;
-			foreach ( $this->skippatterns as $pattern ) {
-				if ( strpos( $path, $pattern ) !== false ) { $ignorethisone = true; break; }
-			}
-			if ( $ignorethisone ) continue;
-			$relative = str_replace($this->parsedir, '', $path);
-
-			$handle = fopen("safe://" . $path, 'r');
-			if (!$handle) {
-				throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relative . '\'');
-			}
-
-			$res = '';
-			while(!feof($handle)) {
-				$res .= fread($handle, filesize($path));
-			}
-			fclose($handle);
-			preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
-			if (isset($m['todo']) && !empty($m['todo'])) {
-				if ($this->highlight) {
-					foreach ($m['todo'] as $k => $t) {
-						$m['todo'][$k] = $this->highlight($t);
-					}
+		foreach ($this->scanDirs as $dir) {
+			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+			$todo = array();
+			foreach ($iterator as $path => $match) {
+				$ignorethisone = false;
+				foreach ( $this->skippatterns as $pattern ) {
+					if ( strpos( $path, $pattern ) !== false ) { $ignorethisone = true; break; }
 				}
-				$todo[$relative] = $m['todo'];
+				if ( $ignorethisone ) continue;
+				$relative = str_replace($dir, '', $path);
+
+				$handle = fopen("safe://" . $path, 'r');
+				if (!$handle) {
+					throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relative . '\'');
+				}
+
+				$res = '';
+				while(!feof($handle)) {
+					$res .= fread($handle, filesize($path));
+				}
+				fclose($handle);
+				preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
+				if (isset($m['todo']) && !empty($m['todo'])) {
+					if ($this->highlight) {
+						foreach ($m['todo'] as $k => $t) {
+							$m['todo'][$k] = $this->highlight($t);
+						}
+					}
+					$todo[$relative] = $m['todo'];
+				}
 			}
 		}
 		return $todo;
+	}
+
+
+
+	/**
+	 * Add directory (or directories) to list.
+	 * @param  string|array
+	 * @return void
+	 * @throws \DirectoryNotFoundException if path is not found
+	 */
+	public function addDirectory($path)
+	{
+		foreach ((array) $path as $val) {
+			$real = realpath($val);
+			if ($real === FALSE) {
+				throw new /*\*/DirectoryNotFoundException("Directory '$val' not found.");
+			}
+			$this->scanDirs[] = $real;
+		}
 	}
 
 

@@ -42,23 +42,23 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/**
 	 * @param string|path $basedir
-	 * @param array $skippatterns 
+	 * @param array $ignoreMask
 	 */
-	public function __construct($basedir = APP_DIR, $skippatterns = array( '.svn', 'sessions', 'temp', 'log' ))
+	public function __construct($basedir = APP_DIR, $ignoreMask = array( '.svn', 'sessions', 'temp', 'log' ))
 	{
-		$this->scanDirs = array( realpath($basedir) );
-		$this->setSkipPatterns( $skippatterns );
+		$this->scanDirs = array(realpath($basedir));
+		$this->setSkipPatterns($ignoreMask);
 	}
 
 
 
 	/**
 	 * Set files which are ignored when browsing files
-	 * @param array $skippatterns 
+	 * @param array $ignoreMask
 	 */
-	public function setSkipPatterns($skippatterns)
+	public function setSkipPatterns($ignoreMask)
 	{
-		$this->ignoreMask = array_merge( $skippatterns, str_replace( '/', '\\', $skippatterns ) );
+		$this->ignoreMask = array_merge( $ignoreMask, str_replace( '/', '\\', $ignoreMask ) );
 	}
 
 
@@ -152,7 +152,7 @@ class TodoPanel extends Object implements IDebugPanel
 			foreach ($iterator as $path => $match) {
 				$ignorethisone = false;
 				foreach ($this->ignoreMask as $pattern) {
-					if (preg_match('~' . $pattern . '~')) {
+					if (preg_match('~' . $pattern . '~', $path)) {
 						continue;
 					}
 				}

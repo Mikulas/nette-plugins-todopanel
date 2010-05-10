@@ -17,7 +17,7 @@
 		<tbody>
 			{foreach $todos as $file => $t}
 				<tr n:foreach="$t as $todo">
-					<td n:if="$iterator->first" rowspan="{=count($t)}">{=basename($file)}</td>
+					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{=basename($file)}</td>
 					<td>{!$todo}</td>
 				</tr>
 			{/foreach}

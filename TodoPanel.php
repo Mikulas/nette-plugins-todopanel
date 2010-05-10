@@ -156,7 +156,7 @@ class TodoPanel extends Object implements IDebugPanel
 					if ( strpos( $path, $pattern ) !== false ) { $ignorethisone = true; break; }
 				}
 				if ( $ignorethisone ) continue;
-				$relative = str_replace($dir, '', $path);
+				$relative = trim( str_replace($dir, '', $path), '/\\' );
 
 				$handle = fopen("safe://" . $path, 'r');
 				if (!$handle) {

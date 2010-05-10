@@ -6,7 +6,7 @@
  * @license MIT
  */
 
-use Nette\Object, Nette\IDebugPanel, Nette\Templates\Template, Nette\Templates\LatteFilter, Nette\IO\SafeStream;
+//use Nette\Object, Nette\IDebugPanel, Nette\Templates\Template, Nette\Templates\LatteFilter, Nette\IO\SafeStream;
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -17,52 +17,57 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private $todo = array();
 
-	/**
-	 * any path+file containing one of the patterns will be skipped
-	 * TODO consider to search the directory string only without filename
-	 * @var array
-	 */
-	private $skippatterns = array();
-
-
-	/** @var bool */
-	public $highlight = TRUE;
-
-	/**
-	 * list of highlighted words, does not affect todo getter itself
-	 * @var array|mixed
-	 */
-	public $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
-
-	/**
-	 * highlight style
-	 * @var string
-	 */
-	public $highlight_begin = '<span style="font-weight: bold;">';
-
-	/** @var string */
-	public $highlight_end = '</span>';
+	/** @var array any path or file containing one of the patterns to skip */
+	private $ignoreMask = array();
 
 	/** @var array */
 	private $scanDirs;
-	
 
-	public function __construct( $basedir = APP_DIR, $skippatterns = array( '/.svn/', '/sessions/', '/temp/', '/log/' ) )
+
+	
+	/** @var bool */
+	public $highlight = TRUE;
+
+	/** @var array|mixed list of highlighted words, does not affect todo getter itself */
+	public $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
+
+	/** @var string */
+	public $highlightBegin = '<span style="font-weight: bold;">';
+
+	/** @var string */
+	public $highlightEnd = '</span>';
+
+
+
+
+	/**
+	 * @param string|path $basedir
+	 * @param array $skippatterns 
+	 */
+	public function __construct($basedir = APP_DIR, $skippatterns = array( '.svn', 'sessions', 'temp', 'log' ))
 	{
 		$this->scanDirs = array( realpath($basedir) );
 		$this->setSkipPatterns( $skippatterns );
 	}
 
-	public function setSkipPatterns( $skippatterns )
+
+
+	/**
+	 * Set files which are ignored when browsing files
+	 * @param array $skippatterns 
+	 */
+	public function setSkipPatterns($skippatterns)
 	{
-		$this->skippatterns = array_merge( $skippatterns, str_replace( '/', '\\', $skippatterns ) );
+		$this->ignoreMask = array_merge( $skippatterns, str_replace( '/', '\\', $skippatterns ) );
 	}
+
+
 
 	/**
 	 * Renders HTML code for custom tab.
 	 * @return void
 	 */
-	function getTab()
+	public function getTab()
 	{
 		return '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPnRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBUaGUgR0lNUAoKKGMpIDIwMDMgSmFrdWIgJ2ppbW1hYycgU3RlaW5lcicz71gAAAGtSURBVHjarZMxSBthFMd/d/feqVjiIAoFcQqVFoogjUSJdDBYaECH4Nq1OLiU2C52KKGi4uTgEhDcFRxEyeDSsQdKhdKSEhAFseEGCxFpa+7r0Fi8axM7+OC/vf/ve+//+ODftQKYiFa4ofLXDb7v/1GpVIrC8lcmuQaYLSzMcPDlhM2dXTzPo1KpAFAul7nb3clo6hEDD/t48WZ5FngdBQCwWXzH1naRarVKLBYDIB6PY9s2hUKBs69Hof4QwBjIZrOkUqlQk2VZAORyOYobq40BYMhknjI+PoGqIFKXKuoIjgrF9aYAEHERdVDRullQR2ibew73+jHGhPrt8PugKrC2RPv8FHv7e3jvPdpeTWKdHuP0D/11uhAgCMB1XXrK+7SffyORSPB4fRHr4hx7+i1uMk0QNJvAGEQVv/c+Vu2Sjpks+vM79vQcLck0qtp8hVoQoKp4gxP4vQ+wapccjEzSOpxGXEVFCCKAcIjG4Kow9mQMzWQQEZKiqApO/SIYGgMCA0svn/H5sIKpZxJ1xO60NgZ8+viB6sUPero6+J2VITLx/3+mG5TntuoX7nmiqfg2Y6EAAAAASUVORK5CYII=">' .
 			'Todo (' . $this->getCount() . ')';
@@ -74,7 +79,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * Renders HTML code for custom panel.
 	 * @return void
 	 */
-	function getPanel()
+	public function getPanel()
 	{
 		ob_start();
 		$template = new Template(dirname(__FILE__) . '/bar.todo.panel.phtml');
@@ -90,7 +95,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * Returns panel ID.
 	 * @return string
 	 */
-	function getId()
+	public function getId()
 	{
 		return __CLASS__;
 	}
@@ -100,7 +105,7 @@ class TodoPanel extends Object implements IDebugPanel
 	/**
 	 * Registeres panel to Debug bar
 	 */
-	static function register()
+	public static function register()
 	{
 		Debug::addPanel(new self);
 	}
@@ -146,10 +151,11 @@ class TodoPanel extends Object implements IDebugPanel
 			$todo = array();
 			foreach ($iterator as $path => $match) {
 				$ignorethisone = false;
-				foreach ( $this->skippatterns as $pattern ) {
-					if ( strpos( $path, $pattern ) !== false ) { $ignorethisone = true; break; }
+				foreach ($this->ignoreMask as $pattern) {
+					if (preg_match('~' . $pattern . '~')) {
+						continue;
+					}
 				}
-				if ( $ignorethisone ) continue;
 				$relative = trim( str_replace($dir, '', $path), '/\\' );
 
 				$handle = fopen("safe://" . $path, 'r');
@@ -205,7 +211,7 @@ class TodoPanel extends Object implements IDebugPanel
 	private function highlight($todo)
 	{
 		foreach ($this->keywords as $kw) {
-			$todo = str_replace($kw, $this->highlight_begin . $kw . $this->highlight_end, $todo);
+			$todo = str_replace($kw, $this->highlightBegin . $kw . $this->highlightEnd, $todo);
 		}
 		return $todo;
 	}

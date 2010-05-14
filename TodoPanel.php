@@ -37,6 +37,8 @@ class TodoPanel extends Object implements IDebugPanel
 	/** @var string */
 	public $highlightEnd = '</span>';
 
+	/** @var array catched patterns for todo comments */
+	public $pattern = array('TODO', 'FIXME', 'FIX ME', 'FIXED', 'FIX', 'TO DO', 'PENDING', 'XXX');
 
 
 
@@ -168,7 +170,25 @@ class TodoPanel extends Object implements IDebugPanel
 					$res .= fread($handle, filesize($path));
 				}
 				fclose($handle);
-				preg_match_all('~/(/|\*{1,2})( |\t|\n)*(?P<type>@?(TODO|FIXME|FIX ME|FIX|TO DO|PENDING))( |\t|\n)*(?P<todo>.*?)( |\t|\n)*(\*/|(\r)?\n)~i', $res, $m);
+				
+				if (count($this->pattern) === 0) {
+					throw new InvalidStateException('No patterns specified for TodoPanel.');
+				}
+				preg_match_all('~
+					(//) #line comments
+						.*? #anything before todo pattern
+						(' . implode('|', $this->pattern) . ') #annotation/line type
+						(?P<todo>.*?) #todo content
+					(\r|\n){1,2} #end line comments
+					~mixs', $res, $m);
+				preg_match_all('~/\*\*?(?P<content>.*?)\*/~mis', $res, $blocks);
+				foreach ($blocks['content'] as $block) {
+					foreach (explode("\n", $block) as $line) {
+						if (preg_match('~(' . implode('|', $this->pattern) . ')(?P<content>.*?)$~mixs', $line, $p)) {
+							array_push($m['todo'], trim($p['content']));
+						}
+					}
+				}
 				if (isset($m['todo']) && !empty($m['todo'])) {
 					if ($this->highlight) {
 						foreach ($m['todo'] as $k => $t) {

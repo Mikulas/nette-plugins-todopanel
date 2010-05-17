@@ -13,6 +13,9 @@ use \Nette\IO\SafeStream;
 use \Nette\Object;
 use \Nette\Templates\Template;
 use \Nette\Templates\LatteFilter;
+use \Nette\DirectoryNotFoundException;
+use \RecursiveDirectoryIterator;
+use \RecursiveIteratorIterator;
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -155,57 +158,56 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		foreach ($this->scanDirs as $dir) {
-			$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
-			$todo = array();
+			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+			$todoItems = array();
 			foreach ($iterator as $path => $match) {
-				$ignorethisone = false;
+				$skip = FALSE;
 				foreach ($this->ignoreMask as $pattern) {
 					if (preg_match('~' . $pattern . '~', $path)) {
-						continue;
+						$skip = TRUE;
+						break;
 					}
 				}
-				$relative = trim( str_replace($dir, '', $path), '/\\' );
-
-				$handle = fopen("safe://" . $path, 'r');
-				if (!$handle) {
-					throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relative . '\'');
+				if ($skip) {
+					continue;
 				}
 
-				$res = '';
+				$relativePath = trim( str_replace($dir, '', $path), '/\\' );
+				$handle = fopen("safe://" . $path, 'r');
+				if (!$handle) {
+					throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relativePath . '\'');
+				}
+
+				$fileContent = '';
 				while(!feof($handle)) {
-					$res .= fread($handle, filesize($path));
+					$fileContent .= fread($handle, filesize($path));
 				}
 				fclose($handle);
 				
 				if (count($this->pattern) === 0) {
 					throw new InvalidStateException('No patterns specified for TodoPanel.');
 				}
-				preg_match_all('~
-					(//) #line comments
-						.*? #anything before todo pattern
-						(' . implode('|', $this->pattern) . ') #annotation/line type
-						(?P<todo>.*?) #todo content
-					(\r|\n){1,2} #end line comments
-					~mixs', $res, $m);
-				preg_match_all('~/\*\*?(?P<content>.*?)\*/~mis', $res, $blocks);
+				
+				preg_match_all('~//(\ |\t|\r|\n|@)*(' . implode('|', $this->pattern) . ')(?P<todo>.*?)$~mixs', $fileContent, $foundMatches);
+				preg_match_all('~/\*\*?(?P<content>.*?)\*/~mis', $fileContent, $blocks);
 				foreach ($blocks['content'] as $block) {
 					foreach (explode("\n", $block) as $line) {
 						if (preg_match('~(' . implode('|', $this->pattern) . ')(?P<content>.*?)$~mixs', $line, $p)) {
-							array_push($m['todo'], trim($p['content']));
+							array_push($foundMatches['todo'], trim($p['content']));
 						}
 					}
 				}
-				if (isset($m['todo']) && !empty($m['todo'])) {
+				if (isset($foundMatches['todo']) && !empty($foundMatches['todo'])) {
 					if ($this->highlight) {
-						foreach ($m['todo'] as $k => $t) {
-							$m['todo'][$k] = $this->highlight($t);
+						foreach ($foundMatches['todo'] as $k => $t) {
+							$foundMatches['todo'][$k] = $this->highlight($t);
 						}
 					}
-					$todo[$relative] = $m['todo'];
+					$todoItems[$relativePath] = $foundMatches['todo'];
 				}
 			}
 		}
-		return $todo;
+		return $todoItems;
 	}
 
 
@@ -221,7 +223,7 @@ class TodoPanel extends Object implements IDebugPanel
 		foreach ((array) $path as $val) {
 			$real = realpath($val);
 			if ($real === FALSE) {
-				throw new /*\*/DirectoryNotFoundException("Directory '$val' not found.");
+				throw new DirectoryNotFoundException("Directory '$val' not found.");
 			}
 			$this->scanDirs[] = $real;
 		}

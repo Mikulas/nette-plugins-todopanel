@@ -6,7 +6,13 @@
  * @license MIT
  */
 
-//use Nette\Object, Nette\IDebugPanel, Nette\Templates\Template, Nette\Templates\LatteFilter, Nette\IO\SafeStream;
+namespace Panel;
+use \Nette\Debug;
+use \Nette\IDebugPanel;
+use \Nette\IO\SafeStream;
+use \Nette\Object;
+use \Nette\Templates\Template;
+use \Nette\Templates\LatteFilter;
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -149,7 +155,7 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		foreach ($this->scanDirs as $dir) {
-			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+			$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
 			$todo = array();
 			foreach ($iterator as $path => $match) {
 				$ignorethisone = false;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Annotations Todo panel for Nette 1.0+. Displays all todos in APP_DIR folder
+ * Annotations Todo panel for Nette 1.0+. Displays all todos in all files given.
  *
  * @author Mikuláš Dítě, Peter Ped Helcmanovsky
  * @license MIT
@@ -20,34 +20,20 @@ use \RecursiveIteratorIterator;
 class TodoPanel extends Object implements IDebugPanel
 {
 
-	/**
-	 * stores generated todos in one instance
-	 * @var array|mixed
-	 */
-	private $todo = array();
+	/** @var array|mixed stores found todos */
+	private $items = array();
 
 	/** @var array any path or file containing one of the patterns to skip */
 	private $ignoreMask = array();
 
 	/** @var array */
-	private $scanDirs;
+	private $scanDirs = array();
 
 
-	
-	/** @var bool */
-	public $highlight = TRUE;
 
-	/** @var array|mixed list of highlighted words, does not affect todo getter itself */
-	public $keywords = array('add', 'fix', 'improve', 'remove', 'delete');
-
-	/** @var string */
-	public $highlightBegin = '<span style="font-weight: bold;">';
-
-	/** @var string */
-	public $highlightEnd = '</span>';
 
 	/** @var array catched patterns for todo comments */
-	public $pattern = array('TODO', 'FIXME', 'FIX ME', 'FIXED', 'FIX', 'TO DO', 'PENDING', 'XXX');
+	public $todoMask = array('TODO', 'FIXME', 'FIX ME', 'FIXED', 'FIX', 'TO DO', 'PENDING', 'XXX');
 
 
 
@@ -64,30 +50,26 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
-	 * Set files which are ignored when browsing files
-	 * @param array $ignoreMask
-	 */
-	public function setSkipPatterns($ignoreMask)
-	{
-		$this->ignoreMask = array_merge( $ignoreMask, str_replace( '/', '\\', $ignoreMask ) );
-	}
-
-
-
-	/**
 	 * Renders HTML code for custom tab.
+	 * IDebugPanel
 	 * @return void
 	 */
 	public function getTab()
 	{
+		$count = 0;
+		foreach ($this->getTodo() as $file) {
+			$count += count($file);
+		}
+
 		return '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPnRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBUaGUgR0lNUAoKKGMpIDIwMDMgSmFrdWIgJ2ppbW1hYycgU3RlaW5lcicz71gAAAGtSURBVHjarZMxSBthFMd/d/feqVjiIAoFcQqVFoogjUSJdDBYaECH4Nq1OLiU2C52KKGi4uTgEhDcFRxEyeDSsQdKhdKSEhAFseEGCxFpa+7r0Fi8axM7+OC/vf/ve+//+ODftQKYiFa4ofLXDb7v/1GpVIrC8lcmuQaYLSzMcPDlhM2dXTzPo1KpAFAul7nb3clo6hEDD/t48WZ5FngdBQCwWXzH1naRarVKLBYDIB6PY9s2hUKBs69Hof4QwBjIZrOkUqlQk2VZAORyOYobq40BYMhknjI+PoGqIFKXKuoIjgrF9aYAEHERdVDRullQR2ibew73+jHGhPrt8PugKrC2RPv8FHv7e3jvPdpeTWKdHuP0D/11uhAgCMB1XXrK+7SffyORSPB4fRHr4hx7+i1uMk0QNJvAGEQVv/c+Vu2Sjpks+vM79vQcLck0qtp8hVoQoKp4gxP4vQ+wapccjEzSOpxGXEVFCCKAcIjG4Kow9mQMzWQQEZKiqApO/SIYGgMCA0svn/H5sIKpZxJ1xO60NgZ8+viB6sUPero6+J2VITLx/3+mG5TntuoX7nmiqfg2Y6EAAAAASUVORK5CYII=">' .
-			'Todo (' . $this->getCount() . ')';
+			'Todo (' . $count . ')';
 	}
 
 
 
 	/**
 	 * Renders HTML code for custom panel.
+	 * IDebugPanel
 	 * @return void
 	 */
 	public function getPanel()
@@ -101,9 +83,10 @@ class TodoPanel extends Object implements IDebugPanel
 	}
 
 
-	
+
 	/**
 	 * Returns panel ID.
+	 * IDebugPanel
 	 * @return string
 	 */
 	public function getId()
@@ -128,24 +111,10 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private function getTodo()
 	{
-		if (empty($this->todo)) {
-			$this->todo = $this->generateTodo();
+		if (empty($this->items)) {
+			$this->items = $this->generateTodo();
 		}
-		return $this->todo;
-	}
-
-
-
-	/**
-	 * Returns count of all second level elements
-	 */
-	private function getCount()
-	{
-		$count = 0;
-		foreach ($this->getTodo() as $file) {
-			$count += count($file);
-		}
-		return $count;
+		return $this->items;
 	}
 
 
@@ -156,58 +125,44 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private function generateTodo()
 	{
+		if (count($this->todoMask) === 0) {
+			throw new InvalidStateException('No todo mask specified for TodoPanel.');
+		}
+		
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
+		$items = array();
 		foreach ($this->scanDirs as $dir) {
 			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
-			$todoItems = array();
 			foreach ($iterator as $path => $match) {
-				$skip = FALSE;
-				foreach ($this->ignoreMask as $pattern) {
-					if (preg_match('~' . $pattern . '~', $path)) {
-						$skip = TRUE;
-						break;
-					}
-				}
-				if ($skip) {
+				if (preg_match('~(' . implode('|', $this->ignoreMask) . ')~', $path)) {
+					$skip = TRUE;
 					continue;
 				}
 
-				$relativePath = trim( str_replace($dir, '', $path), '/\\' );
-				$handle = fopen("safe://" . $path, 'r');
-				if (!$handle) {
-					throw new InvalidStateException('File not readable, you should set proper priviledges to \'' . $relativePath . '\'');
-				}
-
-				$fileContent = '';
-				while(!feof($handle)) {
-					$fileContent .= fread($handle, filesize($path));
-				}
-				fclose($handle);
-				
-				if (count($this->pattern) === 0) {
-					throw new InvalidStateException('No patterns specified for TodoPanel.');
-				}
-				
-				preg_match_all('~//(\ |\t|\r|\n|@)*(' . implode('|', $this->pattern) . ')(?P<todo>.*?)$~mixs', $fileContent, $foundMatches);
-				preg_match_all('~/\*\*?(?P<content>.*?)\*/~mis', $fileContent, $blocks);
-				foreach ($blocks['content'] as $block) {
-					foreach (explode("\n", $block) as $line) {
-						if (preg_match('~(' . implode('|', $this->pattern) . ')(?P<content>.*?)$~mixs', $line, $p)) {
-							array_push($foundMatches['todo'], trim($p['content']));
+				$block = FALSE;
+				foreach(file("safe://" . $path) as $n => $line) {
+					if ($comment = strpos($line, '//') !== FALSE || $shell = strpos($line, '#') !== FALSE) {
+						if (preg_match('~(' . implode('|', $this->todoMask) . ')~i', substr($line, $comment + $shell))) {
+							$items[$path][$n] = trim($line);
+						}
+						continue;
+					}
+					
+					if (!$block && $block = strpos($line, '/*') !== FALSE) {
+						$block = TRUE;
+					}
+					if ($block === TRUE) {
+						if (preg_match('~(' . implode('|', $this->todoMask) . ')(?P<todo>.*)$~ims', substr($line, $block), $found)) {
+							$items[$path][$n] = trim($found['todo']);
 						}
 					}
-				}
-				if (isset($foundMatches['todo']) && !empty($foundMatches['todo'])) {
-					if ($this->highlight) {
-						foreach ($foundMatches['todo'] as $k => $t) {
-							$foundMatches['todo'][$k] = $this->highlight($t);
-						}
+					if (strpos($line, '*/') !== FALSE) {
+						$block = FALSE;
 					}
-					$todoItems[$relativePath] = $foundMatches['todo'];
 				}
 			}
 		}
-		return $todoItems;
+		return $items;
 	}
 
 
@@ -230,17 +185,13 @@ class TodoPanel extends Object implements IDebugPanel
 	}
 
 
-
+	
 	/**
-	 * Highlights specified words in given string
-	 * @param string $todo
-	 * @return string
+	 * Set files which are ignored when browsing files
+	 * @param array $ignoreMask
 	 */
-	private function highlight($todo)
+	public function setSkipPatterns($ignoreMask)
 	{
-		foreach ($this->keywords as $kw) {
-			$todo = str_replace($kw, $this->highlightBegin . $kw . $this->highlightEnd, $todo);
-		}
-		return $todo;
+		$this->ignoreMask = array_merge( $ignoreMask, str_replace( '/', '\\', $ignoreMask ) );
 	}
 }

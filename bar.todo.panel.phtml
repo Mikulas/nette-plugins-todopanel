@@ -11,13 +11,15 @@
 		<thead>
 			<tr>
 				<th>File</th>
+				<th>Line</th>
 				<th>Todo</th>
 			</tr>
 		</thead>
 		<tbody>
 			{foreach $todos as $file => $t}
-				<tr n:foreach="$t as $todo">
+				<tr n:foreach="$t as $line => $todo">
 					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{=basename($file)}</td>
+					<td style="text-align: right; color: #777;">{$line}</td>
 					<td>{!$todo}</td>
 				</tr>
 			{/foreach}

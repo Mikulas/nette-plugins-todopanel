@@ -27,7 +27,7 @@ class TodoPanel extends Object implements IDebugPanel
 	private $ignoreMask = array();
 
 	/** @var array */
-	private $scanDirs = array();
+	protected $scanDirs = array();
 
 
 
@@ -123,7 +123,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * Returns array in format $filename => array($todos)
 	 * @uses SafeStream
 	 */
-	private function generateTodo()
+	protected function generateTodo()
 	{
 		if (count($this->todoMask) === 0) {
 			throw new InvalidStateException('No todo mask specified for TodoPanel.');
@@ -139,25 +139,47 @@ class TodoPanel extends Object implements IDebugPanel
 					continue;
 				}
 
-				$block = FALSE;
+				$phpBlock = FALSE;
+				$latteBlock = FALSE;
+				$htmlBlock = FALSE;
+				
 				foreach(file("safe://" . $path) as $n => $line) {
 					if ($comment = strpos($line, '//') !== FALSE || $shell = strpos($line, '#') !== FALSE) {
-						if (preg_match('~(' . implode('|', $this->todoMask) . ')~i', substr($line, $comment + $shell))) {
-							$items[$path][$n] = trim($line);
+						if (preg_match('~(\*|\ |@)(' . implode('|', $this->todoMask) . ')\ (?P<todo>.*?)$~mixs', substr($line, $comment + $shell), $found)) {
+							$todo = trim($found['todo']);
+							if (!empty($todo)) {
+								$items[$path][$n] = $todo;
+							} else {
+								$items[$path][$n] = trim($line);
+							}
 						}
 						continue;
 					}
-					
-					if (!$block && $block = strpos($line, '/*') !== FALSE) {
-						$block = TRUE;
+
+					if (!$phpBlock && strpos($line, '/*') !== FALSE) {
+						$phpBlock = TRUE;
 					}
-					if ($block === TRUE) {
-						if (preg_match('~(' . implode('|', $this->todoMask) . ')(?P<todo>.*)$~ims', substr($line, $block), $found)) {
+					elseif (!$latteBlock && strpos($line, '{*') !== FALSE) {
+						$latteBlock = TRUE;
+					}
+					elseif (!$htmlBlock && strpos($line, '<!--') !== FALSE) {
+						$htmlBlock = TRUE;
+					}
+
+					if ($phpBlock || $latteBlock || $htmlBlock) {
+						if (preg_match('~(\*|\ |@)(' . implode('|', $this->todoMask) . ')\ (?P<todo>.*?)(\*/|\*}|-->|\r|\n)~mixs', $line, $found)) {
 							$items[$path][$n] = trim($found['todo']);
 						}
-					}
-					if (strpos($line, '*/') !== FALSE) {
-						$block = FALSE;
+						
+						if (strpos($line, '*/') !== FALSE) {
+							$phpBlock = FALSE;
+						}
+						if (strpos($line, '*}') !== FALSE) {
+							$latteBlock = FALSE;
+						}
+						elseif (strpos($line, '-->') !== FALSE) {
+							$htmlBlock = FALSE;
+						}
 					}
 				}
 			}

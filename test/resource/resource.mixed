@@ -1,0 +1,33 @@
+/*
+ * foobar
+ * @todo comment 1
+ * @todo comment 2
+ * foobar
+ */
+/** @TODO comment 3 */
+/*@TODO comment 4*/
+/*TODO comment 5*/
+/* tODo comment 6 /* */
+/* this is notTODO FAIL 1 */
+/* this is TODOnot FAIL 2 */
+
+// nothing
+// line TODO comment 7
+public function test() { //todo
+public function test() { # todo
+// @todo /* fixme comment 8*/
+// /* @todo comment 9 */
+// /* @todo comment 10
+
+
+<!-- @todo comment HTML comment 11 -->
+<!--todo comment HTML comment 12-->
+
+
+{* @todo latte filter comment 13 *}
+{*@todo latte filter tight comment 14*}
+{*
+ * foobar
+ * @todo block latte filter comment 15
+ * foobar
+ *}

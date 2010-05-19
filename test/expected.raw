@@ -1,0 +1,15 @@
+resource.mixed:
+	2 => comment 1
+	3 => comment 2
+	6 => comment 3
+	7 => comment 4
+	8 => comment 5
+	9 => comment 6 /*
+	14 => comment 7
+	17 => /* fixme comment 8*/
+	18 => comment 9 */
+	19 => comment 10
+	22 => comment HTML comment 11
+	26 => latte filter comment 13
+	27 => latte filter tight comment 14
+	30 => block latte filter comment 15

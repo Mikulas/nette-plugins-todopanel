@@ -145,7 +145,7 @@ class TodoPanel extends Object implements IDebugPanel
 				
 				foreach(file("safe://" . $path) as $n => $line) {
 					if ($comment = strpos($line, '//') !== FALSE || $shell = strpos($line, '#') !== FALSE) {
-						if (preg_match('~(\*|\ |@)(' . implode('|', $this->todoMask) . ')\ (?P<todo>.*?)$~mixs', substr($line, $comment + $shell), $found)) {
+						if (preg_match('~[*@/\ ](' . implode('|', $this->todoMask) . ')(\ (?P<todo>.*?))?( |\t)*(\t|\r|\n)~mixs', substr($line, $comment + $shell), $found)) {
 							$todo = trim($found['todo']);
 							if (!empty($todo)) {
 								$items[$path][$n] = $todo;

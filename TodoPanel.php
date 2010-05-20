@@ -26,6 +26,9 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/** @var array any path or file containing one of the patterns to skip */
 	private $ignoreMask = array();
+	
+	/** @var string - regexp prepared from ignoreMask */
+	private $ignorePCRE;
 
 	/** @var array */
 	protected $scanDirs = array();
@@ -135,10 +138,7 @@ class TodoPanel extends Object implements IDebugPanel
 		foreach ($this->scanDirs as $dir) {
 			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
 			foreach ($iterator as $path => $match) {
-				if (preg_match('~(' . implode('|', $this->ignoreMask) . ')~', $path)) {
-					$skip = TRUE;
-					continue;
-				}
+				if (preg_match($this->ignorePCRE, $path)) continue;
 
 				$phpBlock = FALSE;
 				$latteBlock = FALSE;
@@ -210,11 +210,16 @@ class TodoPanel extends Object implements IDebugPanel
 
 	
 	/**
-	 * Set files which are ignored when browsing files
+	 * Set string patterns to ignore files which contain some pattern in full path.
+	 * example: $todopanel->setSkipPatterns( array('/.git', 'app/sessions/') );
 	 * @param array $ignoreMask
 	 */
 	public function setSkipPatterns($ignoreMask)
 	{
-		$this->ignoreMask = array_merge( $ignoreMask, str_replace( '/', '\\', $ignoreMask ) );
+		$this->ignoreMask = $ignoreMask;		//store original skip patterns (for debug purposes?)
+		//prepare regexp string with correctly quoted PCRE control characters and both types of slashes
+		$pattterns = array_merge( str_replace( '\\', '/', $ignoreMask ), str_replace( '/', '\\', $ignoreMask ) );
+		foreach( $pattterns as $k => $v ) $pattterns[$k] = preg_quote( $v, '/' );
+		$this->ignorePCRE = '~(' . implode('|', $pattterns) . ')~';
 	}
 }

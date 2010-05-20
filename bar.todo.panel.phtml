@@ -17,10 +17,11 @@
 		</thead>
 		<tbody>
 			{foreach $todos as $file => $t}
+				{assign filename => basename($file)}
 				<tr n:foreach="$t as $line => $todo">
-					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{=basename($file)}</td>
+					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{$filename}</td>
 					<td style="text-align: right; color: #777;">{$line}</td>
-					<td>{!$todo}</td>
+					<td>{$todo}</td>
 				</tr>
 			{/foreach}
 		</tbody>

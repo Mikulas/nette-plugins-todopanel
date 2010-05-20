@@ -13,7 +13,8 @@ use \Nette\IO\SafeStream;
 use \Nette\Object;
 use \Nette\Templates\Template;
 use \Nette\Templates\LatteFilter;
-use \Nette\DirectoryNotFoundException;
+use \InvalidStateException;
+use \DirectoryNotFoundException;
 use \RecursiveDirectoryIterator;
 use \RecursiveIteratorIterator;
 
@@ -193,7 +194,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * Add directory (or directories) to list.
 	 * @param  string|array
 	 * @return void
-	 * @throws \DirectoryNotFoundException if path is not found
+	 * @throws DirectoryNotFoundException if path is not found
 	 */
 	public function addDirectory($path)
 	{

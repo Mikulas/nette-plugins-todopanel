@@ -169,7 +169,7 @@ class TodoPanel extends Object implements IDebugPanel
 					}
 
 					if ($phpBlock || $latteBlock || $htmlBlock) {
-						if (preg_match('~(\*|\ |@)' . $todoMask . '\s+(?P<todo>.*?)(\*/|\*}|-->|\r|\n)~mixs', $line, $found)) {
+						if (preg_match('~\W' . $todoMask . '[\s:;]+(?P<todo>.*?)(?:\*/|\*}|-->|\r|\n|$)~mixs', $line, $found)) {
 							$items[$path][$n+1] = trim($found['todo']);
 						}
 						if (strpos($line, '*/') !== FALSE) {

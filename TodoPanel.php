@@ -132,6 +132,7 @@ class TodoPanel extends Object implements IDebugPanel
 		if (count($this->todoMask) === 0) {
 			throw new InvalidStateException('No todo mask specified for TodoPanel.');
 		}
+		$todoMask = '(?:' . implode('|', $this->todoMask) . ')';
 		
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		$items = array();
@@ -145,14 +146,14 @@ class TodoPanel extends Object implements IDebugPanel
 				$htmlBlock = FALSE;
 				
 				foreach(file("safe://" . $path) as $n => $line) {
-					if ($comment = strpos($line, '//') !== FALSE || $shell = strpos($line, '#') !== FALSE) {
-						if (preg_match('~[*@/\ ](' . implode('|', $this->todoMask) . ')(\ (?P<todo>.*?))?( |\t)*(\t|\r|\n)~mixs', substr($line, $comment + $shell), $found)) {
+					$slashespos = strpos($line, '//');
+					$dashpos = strpos($line, '#');
+					if ( $slashespos !== FALSE || $dashpos !== FALSE ) {
+						$lcpos = min( $slashespos, $dashpos );		//line comment starting position
+						if ( $lcpos === FALSE ) $lcpos = max( $slashespos, $dashpos );
+						if (preg_match('~\W' . $todoMask . '[\s:;]+(?P<todo>.*)~i', substr($line, $lcpos), $found)) {
 							$todo = trim($found['todo']);
-							if (!empty($todo)) {
-								$items[$path][$n] = $todo;
-							} else {
-								$items[$path][$n] = trim($line);
-							}
+							$items[$path][$n] = !empty($todo) ? $todo : trim(substr($line, 0, $lcpos));
 						}
 						continue;
 					}
@@ -168,10 +169,9 @@ class TodoPanel extends Object implements IDebugPanel
 					}
 
 					if ($phpBlock || $latteBlock || $htmlBlock) {
-						if (preg_match('~(\*|\ |@)(' . implode('|', $this->todoMask) . ')\ (?P<todo>.*?)(\*/|\*}|-->|\r|\n)~mixs', $line, $found)) {
+						if (preg_match('~(\*|\ |@)' . $todoMask . '\s+(?P<todo>.*?)(\*/|\*}|-->|\r|\n)~mixs', $line, $found)) {
 							$items[$path][$n] = trim($found['todo']);
 						}
-						
 						if (strpos($line, '*/') !== FALSE) {
 							$phpBlock = FALSE;
 						}

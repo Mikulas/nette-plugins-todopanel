@@ -178,7 +178,7 @@ class TodoPanel extends Object implements IDebugPanel
 						if (strpos($line, '*}') !== FALSE) {
 							$latteBlock = FALSE;
 						}
-						elseif (strpos($line, '-->') !== FALSE) {
+						if (strpos($line, '-->') !== FALSE) {
 							$htmlBlock = FALSE;
 						}
 					}

@@ -153,7 +153,7 @@ class TodoPanel extends Object implements IDebugPanel
 						if ( $lcpos === FALSE ) $lcpos = max( $slashespos, $dashpos );
 						if (preg_match('~\W' . $todoMask . '[\s:;]+(?P<todo>.*)~i', substr($line, $lcpos), $found)) {
 							$todo = trim($found['todo']);
-							$items[$path][$n] = !empty($todo) ? $todo : trim(substr($line, 0, $lcpos));
+							$items[$path][$n+1] = !empty($todo) ? $todo : trim(substr($line, 0, $lcpos));
 						}
 						continue;
 					}
@@ -170,7 +170,7 @@ class TodoPanel extends Object implements IDebugPanel
 
 					if ($phpBlock || $latteBlock || $htmlBlock) {
 						if (preg_match('~(\*|\ |@)' . $todoMask . '\s+(?P<todo>.*?)(\*/|\*}|-->|\r|\n)~mixs', $line, $found)) {
-							$items[$path][$n] = trim($found['todo']);
+							$items[$path][$n+1] = trim($found['todo']);
 						}
 						if (strpos($line, '*/') !== FALSE) {
 							$phpBlock = FALSE;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Annotations Todo panel for Nette 1.0+. Displays all todos in all files given.
+ * Annotations "Todo" panel for Nette 1.0+. Displays all todos in all files given.
  *
  * @author Mikuláš Dítě, Peter Ped Helcmanovsky
  * @license MIT
@@ -36,7 +36,7 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 
-	/** @var array catched patterns for todo comments */
+	/** @var array catched patterns for "todo" comments */
 	public $todoMask = array('TODO', 'FIXME', 'FIX ME', 'FIXED', 'FIX', 'TO DO', 'PENDING', 'XXX');
 
 

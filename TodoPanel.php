@@ -7,16 +7,16 @@
  */
 
 namespace Panel;
-use \Nette\Debug;
-use \Nette\IDebugPanel;
-use \Nette\IO\SafeStream;
-use \Nette\Object;
-use \Nette\Templates\Template;
-use \Nette\Templates\LatteFilter;
-use \InvalidStateException;
-use \DirectoryNotFoundException;
-use \RecursiveDirectoryIterator;
-use \RecursiveIteratorIterator;
+use Nette\Debug;
+use Nette\IDebugPanel;
+use Nette\IO\SafeStream;
+use Nette\Object;
+use Nette\Templates\Template;
+use Nette\Templates\LatteFilter;
+use InvalidStateException;
+use DirectoryNotFoundException;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -45,7 +45,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * @param string|path $basedir
 	 * @param array $ignoreMask
 	 */
-	public function __construct($basedir = APP_DIR, $ignoreMask = array( '.svn', 'sessions', 'temp', 'log' ))
+	public function __construct($basedir = APP_DIR, $ignoreMask = array( '/.svn/', '/sessions/', '/temp/', '/log/' ))
 	{
 		$this->scanDirs = array(realpath($basedir));
 		$this->setSkipPatterns($ignoreMask);

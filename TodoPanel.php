@@ -139,6 +139,7 @@ class TodoPanel extends Object implements IDebugPanel
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		$items = array();
 		foreach ($this->scanDirs as $dir) {
+			if ( !is_string( $dir ) ) continue;						//only strings will be handled further
 			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
 			foreach ($iterator as $path => $match) {
 				if (preg_match($this->ignorePCRE, $path)) continue;

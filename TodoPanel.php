@@ -82,6 +82,8 @@ class TodoPanel extends Object implements IDebugPanel
 		$template = new Template(dirname(__FILE__) . '/bar.todo.panel.phtml');
 		$template->registerFilter(new LatteFilter());
 		$template->todos = $this->getTodo();
+		$template->todocount = 0;
+		foreach( $template->todos as $filetodos ) $template->todocount += count( $filetodos );
 		$template->render();
 		return $cache['output'] = ob_get_clean();
 	}

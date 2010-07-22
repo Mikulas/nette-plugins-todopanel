@@ -9,7 +9,7 @@
 namespace Panel;
 use Nette\Debug;
 use Nette\IDebugPanel;
-use Nette\IO\SafeStream;
+use Nette\SafeStream;
 use Nette\Object;
 use Nette\Templates\Template;
 use Nette\Templates\LatteFilter;

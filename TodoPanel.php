@@ -36,8 +36,8 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 
-	/** @var array catched patterns for "todo" comments */
-	public $todoMask = array('TODO', 'FIXME', 'FIX ME', 'FIXED', 'FIX', 'TO DO', 'PENDING', 'XXX');
+	/** @var array patterns for "todo" comments to catch */
+	public $todoMask = array('TO\s?DO', 'FIX(?:\s?ME|)', 'FIXED', 'PENDING', 'XXX');
 
 
 

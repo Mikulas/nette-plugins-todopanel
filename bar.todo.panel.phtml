@@ -12,6 +12,7 @@
 			<tr>
 				<th>File</th>
 				<th>Line</th>
+				{if $showType}<th>Type</th>{/if}
 				<th>Todo</th>
 			</tr>
 		</thead>
@@ -21,7 +22,8 @@
 				<tr n:foreach="$t as $line => $todo">
 					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{$filename}</td>
 					<td style="text-align: right; color: #777;">{$line}</td>
-					<td>{$todo}</td>
+					{if $showType}<td style="color: #777;">{$todo['type']}</td>{/if}
+					<td{if $todo['color']} style="color: {!$todo['color']}"{/if}>{$todo['txt']}</td>
 				</tr>
 			{/foreach}
 		</tbody>

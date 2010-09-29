@@ -1,8 +1,8 @@
-﻿TodoPanel for Nette v.1.0+
+Adding TodoPanel:
 
-Usage:
- /bootstrap.php
- |- Debug::addPanel(new TodoPanel());
 
-License: MIT
-Author: Mikuláš Dítě
+TodoPanel::register();
+
+or
+
+Debug::addPanel(new TodoPanel());

@@ -11,7 +11,7 @@ use Nette\Debug;
 use Nette\IDebugPanel;
 use Nette\SafeStream;
 use Nette\Object;
-use Nette\Templates\Template;
+use Nette\Templates\FileTemplate;
 use Nette\Templates\LatteFilter;
 use InvalidStateException;
 use DirectoryNotFoundException;
@@ -40,7 +40,7 @@ class TodoPanel extends Object implements IDebugPanel
 	public $todoMask = array('TO\s?DO', 'FIX\s?ME', 'PENDING', 'XXX');
 
 	/** @var array type colors, use empty array to switch the feature off */
-	public $typeColors = array( 'FIXED' => array(0,0,255), 'FIX' => array(255,0,0), 'PENDING' => array(200,0,200), 'TO' => array(0,100,100) );
+	public $typeColors = array('FIX' => array(255, 0, 0), 'PENDING' => array(200, 0, 200), 'TO' => array(0, 100, 100) );
 
 	/** @var bool panel configuration*/
 	public $showType = true;
@@ -51,9 +51,16 @@ class TodoPanel extends Object implements IDebugPanel
 	 * @param string|path $basedir
 	 * @param array $ignoreMask
 	 */
-	public function __construct($basedir = APP_DIR, $ignoreMask = array( '/.svn/', '/sessions/', '/temp/', '/log/' ))
+	public function __construct($basedir = APP_DIR, $ignoreMask = array('/.git/',  '/.svn/', '/cache/', '/log/', '/sessions/', '/temp/'))
 	{
-		$this->scanDirs = array(realpath($basedir));
+		if (is_array($basedir)) {
+			foreach ($basedir as $path) {
+				$this->addDirectory($path);
+			}
+		} else {
+			$this->addDirectory(realpath($basedir));
+		}
+		
 		$this->setSkipPatterns($ignoreMask);
 	}
 
@@ -85,13 +92,18 @@ class TodoPanel extends Object implements IDebugPanel
 	public function getPanel()
 	{
 		ob_start();
-		$template = new Template(dirname(__FILE__) . '/bar.todo.panel.phtml');
+		$template = new FileTemplate(dirname(__FILE__) . '/bar.todo.panel.phtml');
 		$template->registerFilter(new LatteFilter());
 		$template->todos = $this->getTodo();
 		$template->todocount = 0;
-		foreach( $template->todos as $filetodos ) $template->todocount += count( $filetodos );
+
+		foreach ($template->todos as $filetodos) {
+			$template->todocount += count( $filetodos );
+		}
+
 		$template->showType = $this->showType;
 		$template->render();
+
 		return $cache['output'] = ob_get_clean();
 	}
 
@@ -135,6 +147,8 @@ class TodoPanel extends Object implements IDebugPanel
 	/**
 	 * Returns array in format $filename => array($todos)
 	 * @uses SafeStream
+	 *
+	 * @todo split into smaller functions
 	 */
 	protected function generateTodo()
 	{
@@ -146,7 +160,7 @@ class TodoPanel extends Object implements IDebugPanel
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 		$items = array();
 		foreach ($this->scanDirs as $dir) {
-			if ( !is_string( $dir ) ) continue;						//only strings will be handled further
+			if (!is_string( $dir )) continue; //only strings will be handled further
 			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
 			foreach ($iterator as $path => $match) {
 				if (preg_match($this->ignorePCRE, $path)) continue;
@@ -159,13 +173,13 @@ class TodoPanel extends Object implements IDebugPanel
 					$slashespos = strpos($line, '//');
 					$dashpos = strpos($line, '#');
 					if ( $slashespos !== FALSE || $dashpos !== FALSE ) {
-						$lcpos = min( $slashespos, $dashpos );		//line comment starting position
+						$lcpos = min( $slashespos, $dashpos ); //line comment starting position
 						if ( $lcpos === FALSE ) $lcpos = max( $slashespos, $dashpos );
 						if (preg_match('~' . $todoMask . '(?P<todo>.*)~i', substr($line, $lcpos), $found)) {
 							$todo = trim($found['todo']);
 							$items[$path][$n+1]['txt'] = !empty($todo) ? $todo : trim(substr($line, 0, $lcpos));
 							$items[$path][$n+1]['type'] = $found['type'];
-							$items[$path][$n+1]['color'] = $this->TypeColor($found['type']);
+							$items[$path][$n+1]['color'] = $this->getTypeColor($found['type']);
 						}
 						continue;
 					}
@@ -184,7 +198,7 @@ class TodoPanel extends Object implements IDebugPanel
 						if (preg_match('~' . $todoMask . '(?P<todo>.*?)(?:\*/|\*}|-->|\r|\n|$)~mixs', $line, $found)) {
 							$items[$path][$n+1]['txt'] = trim($found['todo']);
 							$items[$path][$n+1]['type'] = trim($found['type']);
-							$items[$path][$n+1]['color'] = $this->TypeColor($found['type']);
+							$items[$path][$n+1]['color'] = $this->getTypeColor($found['type']);
 						}
 						if (strpos($line, '*/') !== FALSE) {
 							$phpBlock = FALSE;
@@ -199,6 +213,7 @@ class TodoPanel extends Object implements IDebugPanel
 				}
 			}
 		}
+		
 		return $items;
 	}
 
@@ -230,19 +245,34 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	public function setSkipPatterns($ignoreMask)
 	{
-		$this->ignoreMask = $ignoreMask;		//store original skip patterns (for debug purposes?)
+		$this->ignoreMask = $ignoreMask;
+
 		//prepare regexp string with correctly quoted PCRE control characters and both types of slashes
-		$pattterns = array_merge( str_replace( '\\', '/', $ignoreMask ), str_replace( '/', '\\', $ignoreMask ) );
-		foreach( $pattterns as $k => $v ) $pattterns[$k] = preg_quote( $v, '/' );
+		$pattterns = array_merge(str_replace( '\\', '/', $ignoreMask), str_replace('/', '\\', $ignoreMask));
+		
+		foreach ($pattterns as $k => $v) {
+			$pattterns[$k] = preg_quote($v, '/');
+		}
 		$this->ignorePCRE = '~(' . implode('|', $pattterns) . ')~';
 	}
-	
-	protected function TypeColor( $todotype ) {
-		foreach ( $this->typeColors as $typeneedle => $basecolor ) {
-			if ( stripos( $todotype, $typeneedle ) !== 0 ) continue;
+
+
+
+	/**
+	 * @param string $todotype
+	 * @return string
+	 */
+	protected function getTypeColor($todotype)
+	{
+		foreach ($this->typeColors as $typeneedle => $basecolor) {
+			if (stripos($todotype, $typeneedle) !== 0) {
+				continue;
+			}
+
 			list($r, $g, $b) = $basecolor;
 			return "rgb($r,$g,$b)";
 		}
+		
 		return NULL;
 	}
 }

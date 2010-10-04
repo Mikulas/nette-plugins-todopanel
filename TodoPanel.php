@@ -8,15 +8,14 @@
 
 namespace Panel;
 use Nette\Debug;
+use Nette\Finder;
 use Nette\IDebugPanel;
-use Nette\SafeStream;
 use Nette\Object;
+use Nette\SafeStream;
+use Nette\String;
 use Nette\Templates\FileTemplate;
 use Nette\Templates\LatteFilter;
-use InvalidStateException;
-use DirectoryNotFoundException;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
+
 
 class TodoPanel extends Object implements IDebugPanel
 {
@@ -26,66 +25,69 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/** @var array any path or file containing one of the patterns to skip */
 	private $ignoreMask = array();
-	
-	/** @var string - regexp prepared from ignoreMask */
-	private $ignorePCRE;
 
 	/** @var array */
-	protected $scanDirs = array();
-
+	private $scanDirs = array();
 
 
 
 	/** @var array patterns for "todo" comments to catch */
 	public $todoMask = array('TO\s?DO', 'FIX\s?ME', 'PENDING', 'XXX');
 
-	/** @var array type colors, use empty array to switch the feature off */
-	public $typeColors = array('FIX' => array(255, 0, 0), 'PENDING' => array(200, 0, 200), 'TO' => array(0, 100, 100) );
-
-	/** @var bool panel configuration*/
-	public $showType = true;
+	/** @var bool defines wheter the todo type should be visible */
+	public $showType = FALSE;
 
 
 
 	/**
-	 * @param string|path $basedir
-	 * @param array $ignoreMask
+	 * @param array|string $basedir path or paths to scan
+	 * @param array $ignoreMask can use wildcards
 	 */
-	public function __construct($basedir = APP_DIR, $ignoreMask = array('/.git/',  '/.svn/', '/cache/', '/log/', '/sessions/', '/temp/'))
+	public function __construct($basedir = APP_DIR, $ignoreMask = array('.git',  '.svn', 'cache', 'log', 'sessions', 'temp'))
 	{
 		if (is_array($basedir)) {
 			foreach ($basedir as $path) {
-				$this->addDirectory($path);
+				$this->addDirectory(realpath($path));
 			}
 		} else {
 			$this->addDirectory(realpath($basedir));
 		}
 		
-		$this->setSkipPatterns($ignoreMask);
+		$this->setIgnoreMask($ignoreMask);
 	}
 
 
 
 	/**
-	 * Renders HTML code for custom tab.
+	 * Renders HTML code for custom tab
 	 * IDebugPanel
 	 * @return void
 	 */
 	public function getTab()
 	{
-		$count = 0;
-		foreach ($this->getTodo() as $file) {
-			$count += count($file);
-		}
-
 		return '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPnRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBUaGUgR0lNUAoKKGMpIDIwMDMgSmFrdWIgJ2ppbW1hYycgU3RlaW5lcicz71gAAAGtSURBVHjarZMxSBthFMd/d/feqVjiIAoFcQqVFoogjUSJdDBYaECH4Nq1OLiU2C52KKGi4uTgEhDcFRxEyeDSsQdKhdKSEhAFseEGCxFpa+7r0Fi8axM7+OC/vf/ve+//+ODftQKYiFa4ofLXDb7v/1GpVIrC8lcmuQaYLSzMcPDlhM2dXTzPo1KpAFAul7nb3clo6hEDD/t48WZ5FngdBQCwWXzH1naRarVKLBYDIB6PY9s2hUKBs69Hof4QwBjIZrOkUqlQk2VZAORyOYobq40BYMhknjI+PoGqIFKXKuoIjgrF9aYAEHERdVDRullQR2ibew73+jHGhPrt8PugKrC2RPv8FHv7e3jvPdpeTWKdHuP0D/11uhAgCMB1XXrK+7SffyORSPB4fRHr4hx7+i1uMk0QNJvAGEQVv/c+Vu2Sjpks+vM79vQcLck0qtp8hVoQoKp4gxP4vQ+wapccjEzSOpxGXEVFCCKAcIjG4Kow9mQMzWQQEZKiqApO/SIYGgMCA0svn/H5sIKpZxJ1xO60NgZ8+viB6sUPero6+J2VITLx/3+mG5TntuoX7nmiqfg2Y6EAAAAASUVORK5CYII=">' .
-			'Todo (' . $count . ')';
+			'Todo (' . $this->getTodoCount() . ')';
 	}
 
 
 
 	/**
-	 * Renders HTML code for custom panel.
+	 * Sum of found todos in browsed files
+	 * @return int
+	 */
+	public function getTodoCount()
+	{
+		$count = 0;
+		foreach ($this->getTodo() as $file) {
+			$count += count($file);
+		}
+		return $count;
+	}
+
+
+
+	/**
+	 * Renders HTML code for custom panel
 	 * IDebugPanel
 	 * @return void
 	 */
@@ -95,22 +97,16 @@ class TodoPanel extends Object implements IDebugPanel
 		$template = new FileTemplate(dirname(__FILE__) . '/bar.todo.panel.phtml');
 		$template->registerFilter(new LatteFilter());
 		$template->todos = $this->getTodo();
-		$template->todocount = 0;
-
-		foreach ($template->todos as $filetodos) {
-			$template->todocount += count( $filetodos );
-		}
-
+		$template->todoCount = $this->getTodoCount();
 		$template->showType = $this->showType;
 		$template->render();
 
-		return $cache['output'] = ob_get_clean();
+		return ob_get_clean();
 	}
 
 
 
 	/**
-	 * Returns panel ID.
 	 * IDebugPanel
 	 * @return string
 	 */
@@ -146,73 +142,20 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/**
 	 * Returns array in format $filename => array($todos)
-	 * @uses SafeStream
-	 *
-	 * @todo split into smaller functions
+	 * @uses \Nette\SafeStream
+	 * @throws \InvalidStateException
 	 */
 	protected function generateTodo()
 	{
 		if (count($this->todoMask) === 0) {
-			throw new InvalidStateException('No todo mask specified for TodoPanel.');
+			throw new \InvalidStateException('No todo mask specified for TodoPanel.');
 		}
-		$todoMask = '(?:\W|^)(?P<type>' . implode('|', $this->todoMask) . ')[\s:;?!]+';
-		
+
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
+
 		$items = array();
-		foreach ($this->scanDirs as $dir) {
-			if (!is_string( $dir )) continue; //only strings will be handled further
-			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
-			foreach ($iterator as $path => $match) {
-				if (preg_match($this->ignorePCRE, $path)) continue;
-
-				$phpBlock = FALSE;
-				$latteBlock = FALSE;
-				$htmlBlock = FALSE;
-				
-				foreach(file("safe://" . $path) as $n => $line) {
-					$slashespos = strpos($line, '//');
-					$dashpos = strpos($line, '#');
-					if ( $slashespos !== FALSE || $dashpos !== FALSE ) {
-						$lcpos = min( $slashespos, $dashpos ); //line comment starting position
-						if ( $lcpos === FALSE ) $lcpos = max( $slashespos, $dashpos );
-						if (preg_match('~' . $todoMask . '(?P<todo>.*)~i', substr($line, $lcpos), $found)) {
-							$todo = trim($found['todo']);
-							$items[$path][$n+1]['txt'] = !empty($todo) ? $todo : trim(substr($line, 0, $lcpos));
-							$items[$path][$n+1]['type'] = $found['type'];
-							$items[$path][$n+1]['color'] = $this->getTypeColor($found['type']);
-						}
-						continue;
-					}
-
-					if (!$phpBlock && strpos($line, '/*') !== FALSE) {
-						$phpBlock = TRUE;
-					}
-					elseif (!$latteBlock && strpos($line, '{*') !== FALSE) {
-						$latteBlock = TRUE;
-					}
-					elseif (!$htmlBlock && strpos($line, '<!--') !== FALSE) {
-						$htmlBlock = TRUE;
-					}
-
-					if ($phpBlock || $latteBlock || $htmlBlock) {
-						if (preg_match('~' . $todoMask . '(?P<todo>.*?)(?:\*/|\*}|-->|\r|\n|$)~mixs', $line, $found)) {
-							$items[$path][$n+1]['txt'] = trim($found['todo']);
-							$items[$path][$n+1]['type'] = trim($found['type']);
-							$items[$path][$n+1]['color'] = $this->getTypeColor($found['type']);
-							$items[$path][$n+1]['link'] = strtr(Debug::$editor, array('%file' => urlencode($path), '%line' => $n + 1));
-						}
-						if (strpos($line, '*/') !== FALSE) {
-							$phpBlock = FALSE;
-						}
-						if (strpos($line, '*}') !== FALSE) {
-							$latteBlock = FALSE;
-						}
-						if (strpos($line, '-->') !== FALSE) {
-							$htmlBlock = FALSE;
-						}
-					}
-				}
-			}
+		foreach (Finder::findFiles('test.php')->exclude('.*', '*/' . $this->ignoreMask . '/*')->from($this->scanDirs) as $path => $file) {
+			$items[$path] = $this->parseFile($file);
 		}
 		
 		return $items;
@@ -221,59 +164,129 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
-	 * Add directory (or directories) to list.
-	 * @param  string|array
+	 * Reads pointed file and returns all comments found
+	 * @param SplFileInfo $file
+	 * @returns array
+	 */
+	private function parseFile($file)
+	{
+		$todos = array();
+
+		$stream = fopen("safe://" . $file->getRealPath(), 'r');
+		$content_original = $content = fread($stream, filesize("safe://" . $file->getRealPath()));
+		fclose($stream);
+		
+		// Remove harcoded strings so we do not search in them
+		$content = String::replace($content, '~("|\')(.|\\\"|\\\')*?("|\')~s', '\'\'');
+
+		
+		$matches = array();
+
+		$patterns = array(
+			'php' => '~/\*(?P<content>.*?)\*/~sm',
+			'latte' => '~{\*(?P<content>.*?)\*}~sm',
+			'html' => '~<!--(?P<content>.*?)-->~sm',
+		);
+
+		// find block comments
+		foreach ($patterns as $pattern) {
+			$matches = array_merge($matches, String::matchAll($content, $pattern));
+			$content = String::replace($content, $pattern);
+		}
+
+		$comment_lines = array();
+
+		// find oneline comments
+		foreach (String::matchAll($content, '~(//|#)(?P<content>.*?)$~m') as $match) {
+			$comment_lines[] = String::trim($match['content']);
+		}
+
+		// split block comments by lines
+		foreach ($matches as $match) {
+			$comment_block = String::trim($match['content']);
+			$comment_lines = array_merge($comment_lines, String::split($comment_block, '~[\r\n]{1,2}~'));
+		}
+
+		foreach ($comment_lines as $comment_content) {
+			$match = String::match($comment_content, '~(^[@*\s-]*|[@*\s-])(?P<type>' . implode('|', $this->todoMask) . ')\s+(?P<todo>.*?)$~mi');
+			
+			if ($match === NULL) {
+				continue;
+			}
+
+			$line = 0;
+			// assign line number
+			foreach (String::split($content_original, '~\n~') as $line_number => $content_line) {
+				if (strpos($content_line, $comment_content) !== FALSE) {
+					$line = $line_number + 1;
+					break;
+				}
+			}
+
+			$todos[] = array(
+				'line' => $line,
+				'type' => String::lower($match['type']),
+				'content' => $match['todo'],
+				'link' => strtr(Debug::$editor, array('%file' => urlencode($file->getRealPath()), '%line' => $line)),
+				'file' => $file->getFilename(),
+			);
+		}
+
+		usort($todos, callback($this, 'compareTodos'));
+		
+		return $todos;
+	}
+
+
+
+	/**
+	 * Add directory to list
+	 * @param string
 	 * @return void
-	 * @throws DirectoryNotFoundException if path is not found
+	 * @throws DirectoryNotFoundException
 	 */
 	public function addDirectory($path)
 	{
-		foreach ((array) $path as $val) {
-			$real = realpath($val);
-			if ($real === FALSE) {
-				throw new DirectoryNotFoundException("Directory '$val' not found.");
-			}
-			$this->scanDirs[] = $real;
+		$realpath = realpath($path);
+		if (!$realpath) {
+			throw new \DirectoryNotFoundException("Directory `$path` not found.");
 		}
+		$this->scanDirs[] = $realpath;
 	}
 
 
 	
 	/**
-	 * Set string patterns to ignore files which contain some pattern in full path.
-	 * example: $todopanel->setSkipPatterns( array('/.git', 'app/sessions/') );
+	 * Set string patterns to ignore files which contain some pattern in full path
+	 * @example $todoPanel->setSkipPatterns(array('/.git', 'app/sessions/'));
 	 * @param array $ignoreMask
 	 */
-	public function setSkipPatterns($ignoreMask)
+	public function setIgnoreMask(array $ignoreMask, $merge = FALSE)
 	{
-		$this->ignoreMask = $ignoreMask;
-
-		//prepare regexp string with correctly quoted PCRE control characters and both types of slashes
-		$pattterns = array_merge(str_replace( '\\', '/', $ignoreMask), str_replace('/', '\\', $ignoreMask));
-		
-		foreach ($pattterns as $k => $v) {
-			$pattterns[$k] = preg_quote($v, '/');
+		if ($merge) {
+			foreach ($ignoreMask as $mask) {
+				if (!array_search($mask, $this->ignoreMask)) {
+					$this->ignoreMask[] = $mask;
+				}
+			}
+		} else {
+			$this->ignoreMask = $ignoreMask;
 		}
-		$this->ignorePCRE = '~(' . implode('|', $pattterns) . ')~';
 	}
 
 
 
 	/**
-	 * @param string $todotype
-	 * @return string
+	 * usort implementation
+	 * @param array $compared
+	 * @param array $todo
+	 * @return int
 	 */
-	protected function getTypeColor($todotype)
+	public function compareTodos($compared, $todo)
 	{
-		foreach ($this->typeColors as $typeneedle => $basecolor) {
-			if (stripos($todotype, $typeneedle) !== 0) {
-				continue;
-			}
-
-			list($r, $g, $b) = $basecolor;
-			return "rgb($r,$g,$b)";
+		if ($compared['line'] == $todo['line']) {
+			return 0;
 		}
-		
-		return NULL;
+		return $compared['line'] < $todo['line'] ? -1 : 1;
 	}
 }

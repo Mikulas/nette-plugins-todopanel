@@ -20,7 +20,7 @@
 			{foreach $todos as $file => $t}
 				{assign filename => basename($file)}
 				<tr n:foreach="$t as $line => $todo">
-					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}">{$filename}</td>
+					<td n:if="$iterator->first" rowspan="{=count($t)}" title="{$file}"><a href="{$todo['link']}">{$filename}</a></td>
 					<td style="text-align: right; color: #777;">{$line}</td>
 					{if $showType}<td style="color: #777;">{$todo['type']}</td>{/if}
 					<td{if $todo['color']} style="color: {!$todo['color']}"{/if}>{$todo['txt']}</td>

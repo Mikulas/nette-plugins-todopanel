@@ -199,6 +199,7 @@ class TodoPanel extends Object implements IDebugPanel
 							$items[$path][$n+1]['txt'] = trim($found['todo']);
 							$items[$path][$n+1]['type'] = trim($found['type']);
 							$items[$path][$n+1]['color'] = $this->getTypeColor($found['type']);
+							$items[$path][$n+1]['link'] = strtr(Debug::$editor, array('%file' => urlencode($path), '%line' => $n + 1));
 						}
 						if (strpos($line, '*/') !== FALSE) {
 							$phpBlock = FALSE;

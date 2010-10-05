@@ -72,21 +72,6 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
-	 * Sum of found todos in browsed files
-	 * @return int
-	 */
-	public function getTodoCount()
-	{
-		$count = 0;
-		foreach ($this->getTodo() as $file) {
-			$count += count($file);
-		}
-		return $count;
-	}
-
-
-
-	/**
 	 * Renders HTML code for custom panel
 	 * IDebugPanel
 	 * @return void
@@ -128,6 +113,74 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
+	 * Add directory to list
+	 * @param string
+	 * @return void
+	 * @throws DirectoryNotFoundException
+	 */
+	public function addDirectory($path)
+	{
+		$realpath = realpath($path);
+		if (!$realpath) {
+			throw new \DirectoryNotFoundException("Directory `$path` not found.");
+		}
+		$this->scanDirs[] = $realpath;
+	}
+
+
+	
+	/**
+	 * Set string patterns to ignore files which contain some pattern in full path
+	 * @example $todoPanel->setSkipPatterns(array('/.git', 'app/sessions/'));
+	 * @param array $ignoreMask
+	 */
+	public function setIgnoreMask(array $ignoreMask, $merge = FALSE)
+	{
+		if ($merge) {
+			foreach ($ignoreMask as $mask) {
+				if (!array_search($mask, $this->ignoreMask)) {
+					$this->ignoreMask[] = $mask;
+				}
+			}
+		} else {
+			$this->ignoreMask = $ignoreMask;
+		}
+	}
+
+
+
+	/**
+	 * Sum of found todos in browsed files
+	 * @return int
+	 */
+	public function getTodoCount()
+	{
+		$count = 0;
+		foreach ($this->getTodo() as $file) {
+			$count += count($file);
+		}
+		return $count;
+	}
+
+
+
+	/**
+	 * usort implementation
+	 * @param array $compared
+	 * @param array $todo
+	 * @return int
+	 */
+	public function compareTodos($compared, $todo)
+	{
+		if ($compared['line'] == $todo['line']) {
+			return 0;
+		}
+		return $compared['line'] < $todo['line'] ? -1 : 1;
+	}
+
+
+
+	/**
 	 * Wrapper for generateTodo, performace booster in one instance
 	 */
 	private function getTodo()
@@ -145,7 +198,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 * @uses \Nette\SafeStream
 	 * @throws \InvalidStateException
 	 */
-	protected function generateTodo()
+	private function generateTodo()
 	{
 		if (count($this->todoMask) === 0) {
 			throw new \InvalidStateException('No todo mask specified for TodoPanel.');
@@ -235,58 +288,5 @@ class TodoPanel extends Object implements IDebugPanel
 		usort($todos, callback($this, 'compareTodos'));
 		
 		return $todos;
-	}
-
-
-
-	/**
-	 * Add directory to list
-	 * @param string
-	 * @return void
-	 * @throws DirectoryNotFoundException
-	 */
-	public function addDirectory($path)
-	{
-		$realpath = realpath($path);
-		if (!$realpath) {
-			throw new \DirectoryNotFoundException("Directory `$path` not found.");
-		}
-		$this->scanDirs[] = $realpath;
-	}
-
-
-	
-	/**
-	 * Set string patterns to ignore files which contain some pattern in full path
-	 * @example $todoPanel->setSkipPatterns(array('/.git', 'app/sessions/'));
-	 * @param array $ignoreMask
-	 */
-	public function setIgnoreMask(array $ignoreMask, $merge = FALSE)
-	{
-		if ($merge) {
-			foreach ($ignoreMask as $mask) {
-				if (!array_search($mask, $this->ignoreMask)) {
-					$this->ignoreMask[] = $mask;
-				}
-			}
-		} else {
-			$this->ignoreMask = $ignoreMask;
-		}
-	}
-
-
-
-	/**
-	 * usort implementation
-	 * @param array $compared
-	 * @param array $todo
-	 * @return int
-	 */
-	public function compareTodos($compared, $todo)
-	{
-		if ($compared['line'] == $todo['line']) {
-			return 0;
-		}
-		return $compared['line'] < $todo['line'] ? -1 : 1;
 	}
 }

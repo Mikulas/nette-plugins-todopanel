@@ -11,7 +11,7 @@ td.fixme a{color: rgb(255, 20, 20) !important;}
 td.pending a {color: rgb(200, 0, 200) !important;}
 </style>
 
-<h1>{$todoCount}&times;TODO (in {=count($todos)} file{if !count($todos)}s{/if})</h1>
+<h1>{$todoCount}&times;TODO (in {=count($todos)} file{if count($todos) != 0}s{/if})</h1>
 
 <div class="nette-inner">
 	<table style="width: 100%;">

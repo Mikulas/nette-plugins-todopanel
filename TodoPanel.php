@@ -207,7 +207,7 @@ class TodoPanel extends Object implements IDebugPanel
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 
 		$items = array();
-		foreach (Finder::findFiles('*')->exclude('.*', '*/' . $this->ignoreMask . '/*')->from($this->scanDirs) as $path => $file) {
+		foreach (Finder::findFiles('*')->size('> 3B')->exclude('.*', '*/' . $this->ignoreMask . '/*')->from($this->scanDirs) as $path => $file) {
 			$items[$path] = $this->parseFile($file);
 		}
 		

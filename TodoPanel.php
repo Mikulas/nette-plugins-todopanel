@@ -27,7 +27,10 @@ class TodoPanel extends Object implements IDebugPanel
 	private $ignoreMask = array();
 
 	/** @var array */
-	private $scanDirs = array();
+	private $scanDir = array();
+
+	/** @var array */
+	private $commentBlockMask = array();
 
 
 
@@ -53,7 +56,22 @@ class TodoPanel extends Object implements IDebugPanel
 			$this->addDirectory(realpath($basedir));
 		}
 		
+
 		$this->setIgnoreMask($ignoreMask);
+
+
+		$patterns = array(
+			array('~^(php|css)$~', '~/\*(?P<content>.*?)\*/~sm'),
+			array('~^(php)$~', '~//(?P<content>.*?)$~sm'),
+			array('~^(php|sh)$~', '~#(?P<content>.*?)$~sm'),
+			array('~^(phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
+			array('~^(phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
+			array('~^(ini)$~', '~;(?P<content>.*?)$~sm'),
+		);
+
+		foreach ($patterns as $pattern) {
+			call_user_func_array(callback($this, 'addPattern'), $pattern);
+		}
 	}
 
 
@@ -124,7 +142,34 @@ class TodoPanel extends Object implements IDebugPanel
 		if (!$realpath) {
 			throw new \DirectoryNotFoundException("Directory `$path` not found.");
 		}
-		$this->scanDirs[] = $realpath;
+		$this->scanDir[] = $realpath;
+	}
+
+
+
+	/**
+	 * Adds custom comment block pattern
+	 * @param string $extension regex
+	 * @param string $pattern regex Must contain group named `content`
+	 */
+	public function addPattern($extension, $pattern)
+	{
+		self::validatePattern($pattern);
+		$this->commentBlockMask[] = array('extension' => $extension, 'pattern' => $pattern);
+	}
+
+
+
+	/**
+	 * Throws exception if custom pattern does not name comment block content group
+	 * @throws \InvalidArgumentException
+	 * @param string $pattern regex
+	 */
+	private static function validatePattern($pattern)
+	{
+		if (String::match($pattern, '~(?P<content>)~') === NULL) {
+			throw new \InvalidArgumentException('Custom pattern does not contain a group named `content`.');
+		}
 	}
 
 
@@ -207,7 +252,7 @@ class TodoPanel extends Object implements IDebugPanel
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
 
 		$items = array();
-		foreach (Finder::findFiles('*')->size('> 3B')->exclude('.*', '*/' . $this->ignoreMask . '/*')->from($this->scanDirs) as $path => $file) {
+		foreach (Finder::findFiles('*')->size('> 3B')->exclude('.*', '*/' . $this->ignoreMask . '/*')->from($this->scanDir) as $path => $file) {
 			$items[$path] = $this->parseFile($file);
 		}
 		
@@ -233,14 +278,15 @@ class TodoPanel extends Object implements IDebugPanel
 		$content = String::replace($content, '~("|\')(.|\\\"|\\\')*?("|\')~s', '\'\'');
 
 		
+		$patterns = array();
+		foreach ($this->commentBlockMask as $pattern) {
+			if (String::match(pathinfo($file, PATHINFO_EXTENSION), $pattern['extension'])) {
+				$patterns[] = $pattern['pattern'];
+			}
+		}
+
 		$matches = array();
-
-		$patterns = array(
-			'php' => '~/\*(?P<content>.*?)\*/~sm',
-			'latte' => '~{\*(?P<content>.*?)\*}~sm',
-			'html' => '~<!--(?P<content>.*?)-->~sm',
-		);
-
+		
 		// find block comments
 		foreach ($patterns as $pattern) {
 			$matches = array_merge($matches, String::matchAll($content, $pattern));
@@ -248,11 +294,6 @@ class TodoPanel extends Object implements IDebugPanel
 		}
 
 		$comment_lines = array();
-
-		// find oneline comments
-		foreach (String::matchAll($content, '~(//|#)(?P<content>.*?)$~m') as $match) {
-			$comment_lines[] = String::trim($match['content']);
-		}
 
 		// split block comments by lines
 		foreach ($matches as $match) {

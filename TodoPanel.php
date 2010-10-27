@@ -1,6 +1,6 @@
 <?php
 /**
- * Annotations "Todo" panel for Nette 1.0+. Displays all todos in all files given.
+ * TodoPanel for Nette 2.0
  *
  * @author Mikuláš Dítě, Peter Ped Helcmanovsky
  * @license MIT
@@ -121,7 +121,7 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 	/**
-	 * Registeres panel to Debug bar
+	 * Registers panel to Debug bar
 	 */
 	public static function register()
 	{
@@ -175,8 +175,8 @@ class TodoPanel extends Object implements IDebugPanel
 
 	
 	/**
-	 * Set string patterns to ignore files which contain some pattern in full path
-	 * @example $todoPanel->setSkipPatterns(array('/.git', 'app/sessions/'));
+	 * Files to ignore
+	 * @example $todoPanel->setIgnoreMask(array('.git', 'app/sessions'));
 	 * @param array $ignoreMask
 	 */
 	public function setIgnoreMask(array $ignoreMask, $merge = FALSE)

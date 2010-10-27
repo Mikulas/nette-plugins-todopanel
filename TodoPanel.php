@@ -142,7 +142,9 @@ class TodoPanel extends Object implements IDebugPanel
 		if (!$realpath) {
 			throw new \DirectoryNotFoundException("Directory `$path` not found.");
 		}
-		$this->scanDir[] = $realpath;
+		if (!array_search($realpath, $this->scanDir)) {
+			$this->scanDir[] = $realpath;
+		}
 	}
 
 

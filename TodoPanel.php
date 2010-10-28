@@ -23,11 +23,11 @@ class TodoPanel extends Object implements IDebugPanel
 	/** @var array|mixed stores found todos */
 	private $items = array();
 
-	/** @var array any path or file containing one of the patterns to skip */
-	private $ignoreMask = array();
-
 	/** @var array */
 	private $scanDir = array();
+
+	/** @var array any path or file containing one of the patterns to skip */
+	private $ignoreMask = array();
 
 	/** @var array */
 	private $commentBlockMask = array();
@@ -170,7 +170,6 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	private static function validatePattern($pattern)
 	{
-
 		if (String::match($pattern, '~\\(\\?P<content>\\.\\*\\?\\)~') === NULL) {
 			throw new \InvalidArgumentException('Custom pattern `' . $pattern . '` does not contain a group named `content`.');
 		}

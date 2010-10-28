@@ -164,13 +164,15 @@ class TodoPanel extends Object implements IDebugPanel
 
 	/**
 	 * Throws exception if custom pattern does not name comment block content group
+	 * @example pattern `~block_start(?P<content>.*?)block_end~sm`
 	 * @throws \InvalidArgumentException
 	 * @param string $pattern regex
 	 */
 	private static function validatePattern($pattern)
 	{
-		if (String::match($pattern, '~(?P<content>)~') === NULL) {
-			throw new \InvalidArgumentException('Custom pattern does not contain a group named `content`.');
+
+		if (String::match($pattern, '~\\(\\?P<content>\\.\\*\\?\\)~') === NULL) {
+			throw new \InvalidArgumentException('Custom pattern `' . $pattern . '` does not contain a group named `content`.');
 		}
 	}
 

@@ -61,12 +61,13 @@ class TodoPanel extends Object implements IDebugPanel
 
 
 		$patterns = array(
-			array('~^(php|css)$~', '~/\*(?P<content>.*?)\*/~sm'),
-			array('~^(php)$~', '~//(?P<content>.*?)$~sm'),
-			array('~^(php|sh)$~', '~#(?P<content>.*?)$~sm'),
+			array('~^(php|css|js)$~', '~/\*(?P<content>.*?)\*/~sm'),
+			array('~^(php|js)$~', '~//(?P<content>.*?)$~sm'),
+			array('~^(php|sh|ps1)$~', '~#(?P<content>.*?)$~sm'), // PS1=MS PowerShell
 			array('~^(phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
 			array('~^(phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
 			array('~^(ini)$~', '~;(?P<content>.*?)$~sm'),
+			array('~^(bat)$~', '~^ *REM +(?P<content>.*?)$~smi'),
 		);
 
 		foreach ($patterns as $pattern) {

@@ -67,7 +67,7 @@ class TodoPanel extends Object implements IDebugPanel
 			array('~^(phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
 			array('~^(phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
 			array('~^(ini)$~', '~;(?P<content>.*?)$~sm'),
-			array('~^(bat)$~', '~^ *REM +(?P<content>.*?)$~smi'),
+			array('~^(bat)$~', '~^[ \t]*REM[ \t]+(?P<content>.*?)$~smi'),
 		);
 
 		foreach ($patterns as $pattern) {

@@ -63,9 +63,9 @@ class TodoPanel extends Object implements IDebugPanel
 		$patterns = array(
 			array('~^(php|css|js)$~', '~/\*(?P<content>.*?)\*/~sm'),
 			array('~^(php|js)$~', '~//(?P<content>.*?)$~sm'),
-			array('~^(php|sh|ps1)$~', '~#(?P<content>.*?)$~sm'), // PS1=MS PowerShell
-			array('~^(phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
-			array('~^(phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
+			array('~^(php|sh|ps1)$~', '~#(?P<content>.*?)$~sm'),
+			array('~^(latte|phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
+			array('~^(latte|phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
 			array('~^(ini)$~', '~;(?P<content>.*?)$~sm'),
 			array('~^(bat)$~', '~^[ \t]*REM[ \t]+(?P<content>.*?)$~smi'),
 		);
@@ -98,7 +98,7 @@ class TodoPanel extends Object implements IDebugPanel
 	public function getPanel()
 	{
 		ob_start();
-		$template = new FileTemplate(dirname(__FILE__) . '/bar.todo.panel.phtml');
+		$template = new FileTemplate(dirname(__FILE__) . '/bar.todo.panel.latte');
 		$template->registerFilter(new LatteFilter());
 		$template->todos = $this->getTodo();
 		$template->todoCount = $this->getTodoCount();

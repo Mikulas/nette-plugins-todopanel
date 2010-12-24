@@ -305,17 +305,31 @@ class TodoPanel extends Object implements IDebugPanel
 			$comment_lines = array_merge($comment_lines, String::split($comment_block, '~[\r\n]{1,2}~'));
 		}
 
-		foreach ($comment_lines as $comment_content) {
+		foreach ($comment_lines as $key => $comment_content) {
 			$match = String::match($comment_content, '~(^[@*\s-]*|[@*\s-])(?P<type>' . implode('|', $this->todoMask) . ')\s+(?P<todo>.*?)$~mi');
 			
 			if ($match === NULL) {
 				continue;
 			}
 
+			$skip = 0;
+			foreach ($comment_lines as $tkey => $line) {
+				if ($tkey >= $key) {
+					break;
+				}
+				if ($line == $comment_content) {
+					$skip++;
+				}
+			}
+
 			$line = 0;
 			// assign line number
 			foreach (String::split($content_original, '~\n~') as $line_number => $content_line) {
 				if (strpos($content_line, $comment_content) !== FALSE) {
+					if ($skip > 0) {
+						$skip--;
+						continue;
+					}
 					$line = $line_number + 1;
 					break;
 				}

@@ -14,9 +14,9 @@ h2. Installation
     
     \Panel\TodoPanel::register();
 
-h2. License
+h2. License - Original BSD
 
-Copyright (c) Mikuláš Dítě, 2010
+Copyright (c) Mikuláš Dítě, 2011
 All rights reserved.
 
 *Redistribution* and use in source and binary forms, with or without

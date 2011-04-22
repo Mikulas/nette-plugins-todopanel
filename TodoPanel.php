@@ -7,17 +7,17 @@
  */
 
 namespace Panel;
-use Nette\Debug;
-use Nette\Finder;
-use Nette\IDebugPanel;
+use Nette\Diagnostics\Debugger;
+use Nette\Utils\Finder;
+use Nette\Diagnostics\IBarPanel;
 use Nette\Object;
-use Nette\SafeStream;
-use Nette\String;
-use Nette\Templates\FileTemplate;
-use Nette\Templates\LatteFilter;
+use Nette\Utils\SafeStream;
+use Nette\Utils\Strings as String;
+use Nette\Templating\FileTemplate;
+use Nette\Latte\Engine;
 
 
-class TodoPanel extends Object implements IDebugPanel
+class Todo extends Object implements IBarPanel
 {
 
 	/** @var array|mixed stores found todos */
@@ -99,7 +99,7 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		ob_start();
 		$template = new FileTemplate(dirname(__FILE__) . '/bar.todo.panel.latte');
-		$template->registerFilter(new LatteFilter());
+		$template->registerFilter(new Engine());
 		$template->todos = $this->getTodo();
 		$template->todoCount = $this->getTodoCount();
 		$template->showType = $this->showType;
@@ -126,7 +126,7 @@ class TodoPanel extends Object implements IDebugPanel
 	 */
 	public static function register()
 	{
-		Debug::addPanel(new self);
+		Debugger::addPanel(new self);
 	}
 
 
@@ -141,7 +141,7 @@ class TodoPanel extends Object implements IDebugPanel
 	{
 		$realpath = realpath($path);
 		if (!$realpath) {
-			throw new \DirectoryNotFoundException("Directory `$path` not found.");
+			throw new \Nette\DirectoryNotFoundException("Directory `$path` not found.");
 		}
 		if (!array_search($realpath, $this->scanDir)) {
 			$this->scanDir[] = $realpath;
@@ -245,12 +245,12 @@ class TodoPanel extends Object implements IDebugPanel
 	/**
 	 * Returns array in format $filename => array($todos)
 	 * @uses \Nette\SafeStream
-	 * @throws \InvalidStateException
+	 * @throws \Nette\InvalidStateException
 	 */
 	private function generateTodo()
 	{
 		if (count($this->todoMask) === 0) {
-			throw new \InvalidStateException('No todo mask specified for TodoPanel.');
+			throw new \Nette\InvalidStateException('No todo mask specified for TodoPanel.');
 		}
 
 		@SafeStream::register(); //intentionally @ (prevents multiple registration warning)
@@ -339,7 +339,7 @@ class TodoPanel extends Object implements IDebugPanel
 				'line' => $line,
 				'type' => String::lower($match['type']),
 				'content' => $match['todo'],
-				'link' => strtr(Debug::$editor, array('%file' => urlencode($file->getRealPath()), '%line' => $line)),
+				'link' => strtr(Debugger::$editor, array('%file' => urlencode($file->getRealPath()), '%line' => $line)),
 				'file' => $file->getFilename(),
 			);
 		}

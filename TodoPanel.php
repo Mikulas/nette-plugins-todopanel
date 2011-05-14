@@ -124,9 +124,9 @@ class Todo extends Object implements IBarPanel
 	/**
 	 * Registers panel to Debug bar
 	 */
-	public static function register()
+	public static function register($basedir)
 	{
-		Debugger::addPanel(new self);
+		Debugger::addPanel(new self($basedir));
 	}
 
 

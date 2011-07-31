@@ -46,7 +46,7 @@ class Todo extends Object implements IBarPanel
 	 * @param array|string $basedir path or paths to scan
 	 * @param array $ignoreMask can use wildcards
 	 */
-	public function __construct($basedir = APP_DIR, $ignoreMask = array('.git',  '.svn', 'cache', 'log', 'sessions', 'temp'))
+	public function __construct($basedir, $ignoreMask = NULL)
 	{
 		if (is_array($basedir)) {
 			foreach ($basedir as $path) {
@@ -56,8 +56,7 @@ class Todo extends Object implements IBarPanel
 			$this->addDirectory(realpath($basedir));
 		}
 		
-
-		$this->setIgnoreMask($ignoreMask);
+		$this->setIgnoreMask($ignoreMask ?: array('.git',  '.svn', 'cache', 'log', 'sessions', 'temp'));
 
 
 		$patterns = array(
@@ -124,9 +123,9 @@ class Todo extends Object implements IBarPanel
 	/**
 	 * Registers panel to Debug bar
 	 */
-	public static function register()
+	public static function register($basedir = NULL, $ignoreMask = NULL)
 	{
-		Debugger::addPanel(new self);
+		Debugger::addPanel(new self($basedir, $ignoreMask));
 	}
 
 

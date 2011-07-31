@@ -12,7 +12,7 @@ h2. Installation
 * Put TodoPanel.php and the template (bar.todo.panel.latte) into a directory maintained by RobotLoader, ec. LIBS_DIR/Panels/TodoPanel/. Make sure you keep these files together, in the same folder.
 * In BasePresenter.php (or similar) register the panel
     
-    \Panel\TodoPanel::register();
+    \Panel\Todo::register( $appDir );
 
 h2. License - Original BSD
 

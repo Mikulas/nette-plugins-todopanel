@@ -62,7 +62,7 @@ class Todo extends Object implements IBarPanel
 		$patterns = array(
 			array('~^(php|css|js)$~', '~/\*(?P<content>.*?)\*/~sm'),
 			array('~^(php|js)$~', '~//(?P<content>.*?)$~sm'),
-			array('~^(php|sh|ps1)$~', '~#(?P<content>.*?)$~sm'),
+			array('~^(php|sh|ps1|neon)$~', '~#(?P<content>.*?)$~sm'),
 			array('~^(latte|phtml)$~', '~{\*(?P<content>.*?)\*}~sm'),
 			array('~^(latte|phtml|html)$~', '~<!--(?P<content>.*?)-->~sm'),
 			array('~^(ini)$~', '~;(?P<content>.*?)$~sm'),
